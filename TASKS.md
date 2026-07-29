@@ -32,11 +32,11 @@ Status legend:
 
 ### Phase 4 - Open Source Readiness
 - [x] Add root README onboarding and quickstart.
-- [ ] Add LICENSE file.
-- [ ] Add CONTRIBUTING guide and issue templates.
-- [ ] Add CI workflow for test runs.
-- [ ] Decide npm packaging strategy (single package vs multi-package workspace).
-- [ ] If publishing npm package, restrict published files with files/.npmignore.
+- [x] Add LICENSE file.
+- [x] Add CONTRIBUTING guide and issue templates.
+- [x] Add CI workflow for test runs.
+- [x] Decide npm packaging strategy (single package vs multi-package workspace).
+- [x] If publishing npm package, restrict published files with files/.npmignore.
 
 ### Phase 5 - Production Multi-Service Observability (Future)
 - [ ] Define production architecture: control plane + collectors + dashboard.

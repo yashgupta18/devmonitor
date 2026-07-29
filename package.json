@@ -11,6 +11,12 @@
     "example": "node ./examples/local-debug-app.js",
     "test": "node --test"
   },
+  "files": [
+    "src/",
+    "public/",
+    "README.md",
+    "LICENSE"
+  ],
   "keywords": [
     "observability",
     "opentelemetry",

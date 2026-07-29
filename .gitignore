@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+.env
+
+# Python artifacts
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/

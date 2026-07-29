@@ -1,0 +1,28 @@
+{
+  "name": "devscope",
+  "version": "0.1.0",
+  "description": "DevScope - open-source engineering intelligence platform for local debugging",
+  "type": "module",
+  "bin": {
+    "devscope": "./src/cli.js"
+  },
+  "scripts": {
+    "devscope:start": "node ./src/cli.js start",
+    "example": "node ./examples/local-debug-app.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "observability",
+    "opentelemetry",
+    "tracing",
+    "debugging",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-async-hooks": "^1.25.1",
+    "@opentelemetry/sdk-trace-base": "^1.25.1",
+    "express": "^4.19.2"
+  }
+}

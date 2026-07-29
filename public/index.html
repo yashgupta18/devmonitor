@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevScope</title>
+    <style>
+      :root {
+        --bg: #f6f7f4;
+        --card: #ffffff;
+        --text: #1b1f24;
+        --muted: #64748b;
+        --accent: #0f766e;
+        --danger: #b42318;
+        --border: #dbe1e8;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: radial-gradient(
+          circle at 10% 10%,
+          #e6fffa 0%,
+          var(--bg) 35%
+        );
+        color: var(--text);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .stats {
+        display: flex;
+        gap: 12px;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+      .toolbar input,
+      .toolbar select {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 8px;
+        font-size: 12px;
+        background: #fff;
+      }
+      .pill {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        padding: 8px;
+        font-size: 13px;
+      }
+      tr:hover {
+        background: #f0fdfa;
+        cursor: pointer;
+      }
+      .timeline-event {
+        border-left: 3px solid var(--accent);
+        padding: 8px;
+        margin: 8px 0;
+        background: #f8fafc;
+      }
+      .subsection-title {
+        margin: 14px 0 8px;
+        font-size: 14px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .graph-edge {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px;
+        margin: 6px 0;
+        font-size: 12px;
+        background: #f8fafc;
+      }
+      .connector-item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px;
+        margin: 6px 0;
+        font-size: 12px;
+        background: #f8fafc;
+      }
+      .insight-item {
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--accent);
+        border-radius: 10px;
+        padding: 8px;
+        margin: 8px 0;
+        background: #f8fafc;
+      }
+      .insight-item.high {
+        border-left-color: #b42318;
+      }
+      .insight-item.medium {
+        border-left-color: #b54708;
+      }
+      .insight-item.low {
+        border-left-color: #0f766e;
+      }
+      .incident-controls {
+        display: flex;
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .incident-controls input {
+        flex: 1;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 8px;
+        font-size: 12px;
+        background: #fff;
+      }
+      .incident-controls button {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 12px;
+        background: #0f766e;
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .error {
+        color: var(--danger);
+        font-weight: 600;
+      }
+      @media (max-width: 1000px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <section class="panel">
+        <div class="header">
+          <div>
+            <h1>DevScope</h1>
+            <div class="muted">
+              Debug your distributed system in 30 seconds.
+            </div>
+          </div>
+          <div class="stats" id="stats"></div>
+        </div>
+        <div class="toolbar">
+          <label class="sr-only" for="endpointFilter">Filter endpoint</label>
+          <input
+            id="endpointFilter"
+            type="text"
+            placeholder="Filter endpoint (e.g. /checkout)"
+          />
+
+          <label class="sr-only" for="statusFilter">Filter status code</label>
+          <select id="statusFilter">
+            <option value="">All status</option>
+            <option value="200">200</option>
+            <option value="400">400</option>
+            <option value="401">401</option>
+            <option value="404">404</option>
+            <option value="500">500</option>
+          </select>
+
+          <label class="sr-only" for="methodFilter"
+            >Filter request method</label
+          >
+          <select id="methodFilter">
+            <option value="">All methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Path</th>
+              <th>Status</th>
+              <th>Duration</th>
+            </tr>
+          </thead>
+          <tbody id="traces"></tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <div class="header">
+          <h1>Trace Timeline</h1>
+          <div class="muted" id="traceMeta">Select a request</div>
+        </div>
+        <div id="timeline"></div>
+
+        <div class="subsection-title">Service Dependency Graph</div>
+        <div id="graphMeta" class="muted">No graph data yet</div>
+        <div id="graphEdges"></div>
+
+        <div class="subsection-title">Production Connector: Docker</div>
+        <div id="dockerMeta" class="muted">Docker status unknown</div>
+        <div id="dockerContainers"></div>
+
+        <div class="subsection-title">Production Connector: Kubernetes</div>
+        <div id="k8sMeta" class="muted">Kubernetes status unknown</div>
+        <div id="k8sItems"></div>
+
+        <div class="subsection-title">Production Connector: ECS</div>
+        <div id="ecsMeta" class="muted">ECS status unknown</div>
+        <div id="ecsItems"></div>
+
+        <div class="subsection-title">Production Connector: Nomad</div>
+        <div id="nomadMeta" class="muted">Nomad status unknown</div>
+        <div id="nomadItems"></div>
+
+        <div class="subsection-title">AI Explanations</div>
+        <div id="insightsMeta" class="muted">Insights not generated yet</div>
+        <div id="insightsItems"></div>
+
+        <div class="subsection-title">GitHub Incident Intelligence</div>
+        <div class="incident-controls">
+          <label class="sr-only" for="incidentInput"
+            >Incident description</label
+          >
+          <input
+            id="incidentInput"
+            type="text"
+            placeholder="Describe incident (e.g. checkout 500 spike after deploy)"
+          />
+          <button id="incidentAnalyzeBtn" type="button">Analyze</button>
+        </div>
+        <div id="incidentMeta" class="muted">No incident analysis yet</div>
+        <div id="incidentItems"></div>
+      </section>
+    </div>
+
+    <script type="module">
+      let cachedTraces = [];
+      let filters = {
+        endpoint: "",
+        status: "",
+        method: "",
+      };
+
+      const endpointFilterEl = document.getElementById("endpointFilter");
+      const statusFilterEl = document.getElementById("statusFilter");
+      const methodFilterEl = document.getElementById("methodFilter");
+      const incidentInputEl = document.getElementById("incidentInput");
+      const incidentAnalyzeBtnEl =
+        document.getElementById("incidentAnalyzeBtn");
+
+      function updateFilters() {
+        filters = {
+          endpoint: endpointFilterEl.value.trim(),
+          status: statusFilterEl.value,
+          method: methodFilterEl.value,
+        };
+      }
+
+      function renderStats(stats) {
+        const el = document.getElementById("stats");
+        el.innerHTML = `
+          <div class="pill">Total: ${stats.total}</div>
+          <div class="pill">Avg Latency: ${stats.avgLatency}ms</div>
+          <div class="pill">Errors: ${stats.failed}</div>
+        `;
+      }
+
+      function renderTraceRows(traces) {
+        const body = document.getElementById("traces");
+        body.innerHTML = traces
+          .map(
+            (trace) => `
+            <tr data-trace-id="${trace.traceId}">
+              <td>${trace.method}</td>
+              <td>${trace.path}</td>
+              <td class="${trace.statusCode >= 500 ? "error" : ""}">${trace.statusCode ?? "-"}</td>
+              <td>${trace.durationMs ?? "-"} ms</td>
+            </tr>
+          `,
+          )
+          .join("");
+
+        body.querySelectorAll("tr").forEach((row) => {
+          row.addEventListener("click", () => {
+            const traceId = row.dataset.traceId;
+            const selected = cachedTraces.find(
+              (trace) => trace.traceId === traceId,
+            );
+            if (selected) {
+              renderTimeline(selected);
+            }
+          });
+        });
+      }
+
+      function renderTimeline(trace) {
+        document.getElementById("traceMeta").textContent =
+          `${trace.method} ${trace.path} | Trace ${trace.traceId.slice(0, 8)}`;
+        const timeline = document.getElementById("timeline");
+
+        if (!trace.events.length) {
+          timeline.innerHTML =
+            "<div class='muted'>No downstream events recorded for this request.</div>";
+          return;
+        }
+
+        timeline.innerHTML = trace.events
+          .map(
+            (event) => `
+            <div class="timeline-event">
+              <div><strong>${event.type.toUpperCase()}</strong> ${event.name}</div>
+              <div class="muted">Duration: ${event.durationMs ?? "-"} ms | Status: ${event.status}</div>
+            </div>
+          `,
+          )
+          .join("");
+      }
+
+      function renderGraph(graph) {
+        const meta = document.getElementById("graphMeta");
+        const edgesEl = document.getElementById("graphEdges");
+
+        if (!graph.edges || graph.edges.length === 0) {
+          meta.textContent =
+            "No dependency edges yet. Generate traffic to populate graph.";
+          edgesEl.innerHTML = "";
+          return;
+        }
+
+        meta.textContent = `${graph.nodes.length} nodes, ${graph.edges.length} edges, ${graph.totalTraces} traces analyzed`;
+        edgesEl.innerHTML = graph.edges
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 12)
+          .map(
+            (edge) => `
+            <div class="graph-edge">
+              <strong>${edge.from}</strong> -> <strong>${edge.to}</strong><br />
+              Calls: ${edge.count} | Avg latency: ${edge.avgDurationMs ?? "-"} ms
+            </div>
+          `,
+          )
+          .join("");
+      }
+
+      function renderDockerStatus(payload) {
+        const meta = document.getElementById("dockerMeta");
+        const containersEl = document.getElementById("dockerContainers");
+
+        if (!payload.ok) {
+          meta.textContent =
+            "Docker unavailable on this machine or not running.";
+          containersEl.innerHTML = `<div class="connector-item error">${payload.error ?? "docker_unavailable"}</div>`;
+          return;
+        }
+
+        meta.textContent = `${payload.containerCount} running container(s)`;
+        containersEl.innerHTML = payload.containers
+          .slice(0, 8)
+          .map(
+            (container) => `
+            <div class="connector-item">
+              <strong>${container.name}</strong> (${container.image})<br />
+              State: ${container.state} | Status: ${container.status}
+            </div>
+          `,
+          )
+          .join("");
+
+        if (payload.containerCount === 0) {
+          containersEl.innerHTML =
+            '<div class="connector-item muted">Docker is available, but no running containers were found.</div>';
+        }
+      }
+
+      function renderKubernetesStatus(payload) {
+        const meta = document.getElementById("k8sMeta");
+        const itemsEl = document.getElementById("k8sItems");
+
+        if (!payload.ok) {
+          meta.textContent =
+            "Kubernetes unavailable on this machine or context inaccessible.";
+          itemsEl.innerHTML = `<div class="connector-item error">${payload.error ?? "kubernetes_unavailable"}</div>`;
+          return;
+        }
+
+        meta.textContent = `Context: ${payload.context || "unknown"} | Pods: ${payload.podCount}`;
+        itemsEl.innerHTML = payload.pods
+          .slice(0, 8)
+          .map(
+            (pod) => `
+            <div class="connector-item">
+              <strong>${pod.namespace}/${pod.name}</strong><br />
+              Phase: ${pod.phase}${pod.node ? ` | Node: ${pod.node}` : ""}
+            </div>
+          `,
+          )
+          .join("");
+
+        if (payload.podCount === 0) {
+          itemsEl.innerHTML =
+            '<div class="connector-item muted">Kubernetes is available, but no pods were returned.</div>';
+        }
+      }
+
+      function renderEcsStatus(payload) {
+        const meta = document.getElementById("ecsMeta");
+        const itemsEl = document.getElementById("ecsItems");
+
+        if (!payload.ok) {
+          meta.textContent =
+            "ECS unavailable (AWS CLI/config/permissions missing).";
+          itemsEl.innerHTML = `<div class="connector-item error">${payload.error ?? "ecs_unavailable"}</div>`;
+          return;
+        }
+
+        meta.textContent = `${payload.clusterCount} ECS cluster(s)`;
+        itemsEl.innerHTML = payload.clusters
+          .slice(0, 8)
+          .map(
+            (cluster) => `
+            <div class="connector-item">
+              <strong>${cluster.name}</strong> (${cluster.status})<br />
+              Running: ${cluster.runningTasksCount} | Pending: ${cluster.pendingTasksCount} | Instances: ${cluster.containerInstancesCount}
+            </div>
+          `,
+          )
+          .join("");
+
+        if (payload.clusterCount === 0) {
+          itemsEl.innerHTML =
+            '<div class="connector-item muted">ECS is available, but no clusters were returned.</div>';
+        }
+      }
+
+      function renderNomadStatus(payload) {
+        const meta = document.getElementById("nomadMeta");
+        const itemsEl = document.getElementById("nomadItems");
+
+        if (!payload.ok) {
+          meta.textContent =
+            "Nomad unavailable on this machine or cluster unreachable.";
+          itemsEl.innerHTML = `<div class="connector-item error">${payload.error ?? "nomad_unavailable"}</div>`;
+          return;
+        }
+
+        meta.textContent = `${payload.nodeCount} Nomad node(s)`;
+        itemsEl.innerHTML = payload.nodes
+          .slice(0, 8)
+          .map(
+            (node) => `
+            <div class="connector-item">
+              <strong>${node.name}</strong> (${node.status})<br />
+              Datacenter: ${node.datacenter}
+            </div>
+          `,
+          )
+          .join("");
+
+        if (payload.nodeCount === 0) {
+          itemsEl.innerHTML =
+            '<div class="connector-item muted">Nomad is available, but no nodes were returned.</div>';
+        }
+      }
+
+      function renderInsights(payload) {
+        const meta = document.getElementById("insightsMeta");
+        const itemsEl = document.getElementById("insightsItems");
+
+        if (!payload.insights || payload.insights.length === 0) {
+          meta.textContent = "No strong signals detected yet.";
+          itemsEl.innerHTML =
+            '<div class="connector-item muted">Generate more traffic to surface latency and error patterns.</div>';
+          return;
+        }
+
+        meta.textContent = `${payload.insights.length} insight(s) from ${payload.analyzedTraces} trace(s)`;
+        itemsEl.innerHTML = payload.insights
+          .map(
+            (insight) => `
+            <div class="insight-item ${insight.severity}">
+              <div><strong>${insight.title}</strong></div>
+              <div class="muted">${insight.explanation}</div>
+              <div class="muted">Severity: ${insight.severity.toUpperCase()}</div>
+            </div>
+          `,
+          )
+          .join("");
+      }
+
+      function renderIncidentReport(payload) {
+        const meta = document.getElementById("incidentMeta");
+        const itemsEl = document.getElementById("incidentItems");
+
+        if (!payload.ok) {
+          meta.textContent = "Incident analysis unavailable.";
+          itemsEl.innerHTML = `<div class="connector-item error">${payload.error ?? "analysis_failed"}</div>`;
+          return;
+        }
+
+        meta.textContent = `${payload.suspects.length} suspect commit(s) for incident: ${payload.incident}`;
+        itemsEl.innerHTML = payload.suspects
+          .map(
+            (suspect) => `
+            <div class="connector-item">
+              <strong>${suspect.shortSha}</strong> by ${suspect.author}<br />
+              ${suspect.message}<br />
+              Score: ${suspect.score}${
+                suspect.suggestedPullRequest
+                  ? ` | <a href="${suspect.suggestedPullRequest}" target="_blank" rel="noreferrer">Open commit</a>`
+                  : ""
+              }
+            </div>
+          `,
+          )
+          .join("");
+
+        if (payload.suspects.length === 0) {
+          itemsEl.innerHTML =
+            '<div class="connector-item muted">No matching commit messages in recent history.</div>';
+        }
+      }
+
+      async function analyzeIncident() {
+        const incident = incidentInputEl.value.trim() || "error spike";
+        const response = await fetch("/api/intelligence/github", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ incident, limit: 5, traceLimit: 200 }),
+        });
+        const payload = await response.json();
+        renderIncidentReport(payload);
+      }
+
+      async function refresh() {
+        const params = new URLSearchParams({ limit: "200" });
+        if (filters.endpoint) {
+          params.set("endpoint", filters.endpoint);
+        }
+        if (filters.status) {
+          params.set("status", filters.status);
+        }
+        if (filters.method) {
+          params.set("method", filters.method);
+        }
+
+        const response = await fetch(`/api/traces?${params.toString()}`);
+        const payload = await response.json();
+        const graphResponse = await fetch("/api/graph?limit=500");
+        const graph = await graphResponse.json();
+        const [
+          dockerResponse,
+          kubernetesResponse,
+          ecsResponse,
+          nomadResponse,
+          insightsResponse,
+        ] = await Promise.all([
+          fetch("/api/connectors/docker"),
+          fetch("/api/connectors/kubernetes"),
+          fetch("/api/connectors/ecs"),
+          fetch("/api/connectors/nomad"),
+          fetch("/api/insights?limit=300"),
+        ]);
+        const dockerPayload = await dockerResponse.json();
+        const kubernetesPayload = await kubernetesResponse.json();
+        const ecsPayload = await ecsResponse.json();
+        const nomadPayload = await nomadResponse.json();
+        const insightsPayload = await insightsResponse.json();
+        cachedTraces = payload.traces;
+        renderStats(payload.stats);
+        renderTraceRows(payload.traces);
+        renderGraph(graph);
+        renderDockerStatus(dockerPayload);
+        renderKubernetesStatus(kubernetesPayload);
+        renderEcsStatus(ecsPayload);
+        renderNomadStatus(nomadPayload);
+        renderInsights(insightsPayload);
+      }
+
+      endpointFilterEl.addEventListener("input", () => {
+        updateFilters();
+        refresh();
+      });
+      statusFilterEl.addEventListener("change", () => {
+        updateFilters();
+        refresh();
+      });
+      methodFilterEl.addEventListener("change", () => {
+        updateFilters();
+        refresh();
+      });
+      incidentAnalyzeBtnEl.addEventListener("click", () => {
+        analyzeIncident();
+      });
+      incidentInputEl.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          analyzeIncident();
+        }
+      });
+
+      await refresh();
+      setInterval(refresh, 2000);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "@devscope/sdk",
+  "version": "0.1.0",
+  "description": "Node SDK bridge for sending OpenTelemetry spans to DevScope",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "license": "MIT"
+}

@@ -25,7 +25,20 @@
     "debugging",
     "developer-tools"
   ],
+  "author": "Yash Gupta",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yashgupta18/devscope.git"
+  },
+  "homepage": "https://github.com/yashgupta18/devscope#readme",
+  "bugs": {
+    "url": "https://github.com/yashgupta18/devscope/issues"
+  },
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-async-hooks": "^1.25.1",

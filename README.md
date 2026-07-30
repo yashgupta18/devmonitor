@@ -14,7 +14,7 @@ It lets you run a sample service and immediately inspect:
 
 - MVP and roadmap tasks in `TASKS.md` are complete.
 - Automated tests are passing.
-- The project is suitable for a public alpha release.
+- Package is prepared for npm release as `devmonitor`.
 
 ## Requirements
 
@@ -28,12 +28,14 @@ It lets you run a sample service and immediately inspect:
 
 ## Quick Start
 
-Install from npm (global CLI):
+For end users (global CLI):
 
 ```bash
 npm install -g devmonitor
 devmonitor start
 ```
+
+For local development:
 
 1. Install dependencies:
 
@@ -165,19 +167,19 @@ python ./examples/python-otel-example.py
 
 ## CLI
 
-If installed from npm globally:
+Global install command:
 
 ```bash
 devmonitor start
 ```
 
-Start DevScope:
+Local development command:
 
 ```bash
 npm run devscope:start
 ```
 
-Start DevScope plus sample app:
+Local development with sample app:
 
 ```bash
 npm run devscope:start -- --example
@@ -343,27 +345,37 @@ npm run devscope:start
 Production onboarding guide:
 - `PRODUCTION_CONNECTORS_SECURITY.md`
 
-## Open-Source Release Checklist (Suggested)
+## Publishing (Maintainers)
 
-Before publishing publicly:
-- Add `LICENSE` file (MIT text).
-- Add `CONTRIBUTING.md`.
-- Add issue and PR templates.
-- Add CI workflow for `npm test`.
-- Add release notes for `v0.1.0-alpha`.
+Release steps:
 
-## NPM Publishing Guidance
+1. Verify package payload:
 
-You do not need to publish to npm to open source the repository.
+```bash
+npm pack --dry-run
+```
 
-Recommended approach:
-1. Open source the GitHub repo first.
-2. Gather feedback on DX and stability.
-3. Publish npm packages after API/contracts settle.
+2. Run tests:
 
-Current packaging note:
-- Root package publishing has been restricted via `files` in `package.json` to runtime assets (`src/`, `public/`, `README.md`, `LICENSE`).
-- Run `npm pack --dry-run` before release to verify bundle contents.
+```bash
+npm test
+```
+
+3. Publish:
+
+```bash
+npm publish
+```
+
+4. Tag release:
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+Packaging note:
+- Root package publishing is restricted via `files` in `package.json` to runtime assets (`src/`, `public/`, `README.md`, `LICENSE`).
 
 ## Project Docs
 

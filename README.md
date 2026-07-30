@@ -31,7 +31,7 @@ It lets you run a sample service and immediately inspect:
 For end users (global CLI):
 
 ```bash
-npm install -g devmonitor
+npm install -g @yashgupta18/devmonitor
 devmonitor start
 ```
 

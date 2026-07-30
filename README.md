@@ -384,3 +384,4 @@ Packaging note:
 - Test/validation guide: `TESTING.md`
 - Production architecture: `PRODUCTION_ARCHITECTURE.md`
 - Mini E2E example app guide: `MINI_EXAMPLE_APP.md`
+- npm release and autopublish guide: `NPM_RELEASE_AUTOPUBLISH.md`

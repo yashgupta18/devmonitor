@@ -51,17 +51,24 @@ Behavior:
 - Reads package name and version from `package.json`
 - Checks whether that exact version already exists on npm
 - Publishes only when the version does not already exist
+- Uses GitHub OIDC Trusted Publishing (no npm token secret)
+- Uses GitHub Actions environment: `npm-publish`
 
 ## One-Time Setup
 
-1. Create an npm token:
-- npm website -> Access Tokens
-- Create a granular token with package publish permissions
-- If your npm account enforces 2FA for publish, use a token that can bypass 2FA for automation
+1. Configure Trusted Publisher in npm:
+- npm package settings -> Trusted Publishers -> Add Publisher
+- Provider: GitHub Actions
+- Repository: `yashgupta18/devmonitor`
+- Workflow file: `.github/workflows/publish-npm.yml`
+- Environment name: `npm-publish`
+- Allowed actions: select `allow npm publish`
+- Optional: select `allow npm stage publish` only if you plan staged releases
 
-2. Add repository secret in GitHub:
-- Secret name: `NPM_TOKEN`
-- Secret value: your npm token
+2. Create GitHub environment:
+- GitHub repo -> Settings -> Environments -> New environment
+- Name: `npm-publish`
+- Optional: add required reviewers if you want approval before publish
 
 3. Ensure the package version changes before merging to `main`:
 - If version is unchanged, workflow will skip publish
@@ -80,8 +87,8 @@ Behavior:
 ## Troubleshooting
 
 - `E403` permission or 2FA errors:
-  - Check `NPM_TOKEN` permissions
-  - Regenerate token with proper publish scope
+  - Confirm Trusted Publisher is linked to the exact repo/workflow/environment
+  - Confirm workflow has `id-token: write` permission
 - Version already exists:
   - Bump version and push again
 - Workflow skipped publish:

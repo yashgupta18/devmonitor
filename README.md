@@ -31,7 +31,7 @@ It lets you run a sample service and immediately inspect:
 Install from npm (global CLI):
 
 ```bash
-npm install -g @appscope/devmonitor
+npm install -g devmonitor
 devmonitor start
 ```
 

@@ -10,12 +10,6 @@ It lets you run a sample service and immediately inspect:
 - AI-style rule-based insights
 - GitHub incident intelligence (heuristic commit correlation)
 
-## Current Status
-
-- MVP and roadmap tasks in `TASKS.md` are complete.
-- Automated tests are passing.
-- Package is prepared for npm release as `devmonitor`.
-
 ## Requirements
 
 - Node.js 18+

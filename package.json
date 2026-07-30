@@ -1,6 +1,6 @@
 {
   "name": "devtracekit",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "devtracekit - open-source engineering intelligence platform for local debugging",
   "type": "module",
   "bin": {

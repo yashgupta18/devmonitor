@@ -35,6 +35,16 @@ jobs:
         run: |
           node -e "const fs=require('node:fs'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'name=' + pkg.name + '\n'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'version=' + pkg.version + '\n');"
 
+      - name: Debug trusted publish context
+        run: |
+          echo "repo=${{ github.repository }}"
+          echo "ref=${{ github.ref }}"
+          echo "workflow=${{ github.workflow }}"
+          echo "workflow_ref=${{ github.workflow_ref }}"
+          echo "job_environment=npm-publish"
+          echo "package=${{ steps.pkg.outputs.name }}"
+          echo "version=${{ steps.pkg.outputs.version }}"
+
       - name: Check if version already exists on npm
         id: exists
         run: |
@@ -48,4 +58,4 @@ jobs:
 
       - name: Publish to npm
         if: steps.exists.outputs.publish == 'true'
-        run: npm publish --access public --provenance
+        run: npm publish --access public --provenance --registry https://registry.npmjs.org

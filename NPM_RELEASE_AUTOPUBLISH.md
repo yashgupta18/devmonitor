@@ -89,6 +89,12 @@ Behavior:
 - `E403` permission or 2FA errors:
   - Confirm Trusted Publisher is linked to the exact repo/workflow/environment
   - Confirm workflow has `id-token: write` permission
+- `E404` on scoped package publish from Actions:
+  - Confirm Trusted Publisher is configured on the package `@yashgupta18/devmonitor` (not only account-level)
+  - Confirm workflow file is exactly `.github/workflows/publish-npm.yml`
+  - Confirm environment name is exactly `npm-publish`
+  - Remove and re-add the Trusted Publisher entry after repo rename
+  - Re-run workflow and compare debug step values with npm Trusted Publisher fields
 - Version already exists:
   - Bump version and push again
 - Workflow skipped publish:

@@ -1,4 +1,4 @@
-# Mini Example App: End-to-End DevScope Validation
+# Mini Example App: End-to-End devmonitor Validation
 
 This mini app generates traces, service dependencies, federation metadata, GitOps events, canary signals, cost/capacity data, and incident postmortem/replay artifacts.
 

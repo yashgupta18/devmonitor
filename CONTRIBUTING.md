@@ -1,4 +1,4 @@
-# Contributing to DevScope
+# Contributing to devmonitor
 
 Thanks for contributing.
 

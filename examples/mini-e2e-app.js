@@ -68,7 +68,7 @@ export async function startMiniE2eApp(options = {}) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>DevScope Mini E2E App</title>
+    <title>devmonitor Mini E2E App</title>
     <style>
       body {
         font-family: "Segoe UI", sans-serif;
@@ -122,7 +122,7 @@ export async function startMiniE2eApp(options = {}) {
   </head>
   <body>
     <div class="card">
-      <h1>DevScope Mini E2E App</h1>
+      <h1>devmonitor Mini E2E App</h1>
       <p>
         This app is running on <code>http://localhost:${appPort}</code> and the
         dashboard is at <a href="http://localhost:${dashboardPort}" target="_blank" rel="noreferrer">http://localhost:${dashboardPort}</a>.

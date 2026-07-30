@@ -1,4 +1,4 @@
-## DevScope Implementation Tracker
+## devmonitor Implementation Tracker
 
 Status legend:
 - [x] Completed
@@ -17,7 +17,7 @@ Status legend:
 ### Phase 2 - OpenTelemetry Integration
 - [x] Add Node SDK package surface (`@devscope/sdk`).
 - [x] Add Python package surface (`devscope`).
-- [x] Map OpenTelemetry spans into DevScope event schema.
+- [x] Map OpenTelemetry spans into devmonitor event schema.
 - [x] Validate context propagation with real instrumented service.
 
 ### Phase 3+

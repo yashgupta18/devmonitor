@@ -1,6 +1,6 @@
-# DevScope
+# devmonitor
 
-DevScope is a local-first observability toolkit for backend development.
+devmonitor is a local-first observability toolkit for backend development.
 
 It lets you run a sample service and immediately inspect:
 - Request traces
@@ -49,7 +49,7 @@ npm install
 npm test
 ```
 
-3. Start DevScope with the example app:
+3. Start devmonitor with the example app:
 
 ```bash
 npm run devscope:start -- --example
@@ -102,7 +102,7 @@ python -m pip install --upgrade pip
 python -m pip install -e ./packages/devscope-python
 ```
 
-2. Point Python client to DevScope ingest endpoint:
+2. Point Python client to devmonitor ingest endpoint:
 
 ```bash
 export DEVSCOPE_INGEST_URL=http://localhost:4328/api/ingest/otel

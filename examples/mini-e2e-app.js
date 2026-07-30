@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "node:crypto";
-import { createDevScope } from "../src/devscope/index.js";
+import { createDevMonitor } from "../src/devmonitor/index.js";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -12,19 +12,19 @@ function randomInt(min, max) {
 
 export async function startMiniE2eApp(options = {}) {
   const dashboardPort = Number(
-    options.dashboardPort ?? process.env.DEVSCOPE_DASHBOARD_PORT ?? 4318,
+    options.dashboardPort ?? process.env.DEVMONITOR_DASHBOARD_PORT ?? 4318,
   );
   const appPort = Number(
-    options.appPort ?? process.env.DEVSCOPE_MINI_APP_PORT ?? 3050,
+    options.appPort ?? process.env.DEVMONITOR_MINI_APP_PORT ?? 3050,
   );
 
   const scope = {
-    tenantId: process.env.DEVSCOPE_TENANT_ID ?? "team-mini",
-    projectId: process.env.DEVSCOPE_PROJECT_ID ?? "storefront",
-    environment: process.env.DEVSCOPE_ENVIRONMENT ?? "prod",
+    tenantId: process.env.DEVMONITOR_TENANT_ID ?? "team-mini",
+    projectId: process.env.DEVMONITOR_PROJECT_ID ?? "storefront",
+    environment: process.env.DEVMONITOR_ENVIRONMENT ?? "prod",
   };
 
-  const devscope = createDevScope({
+  const devmonitor = createDevMonitor({
     dashboardPort,
     defaultTenantId: scope.tenantId,
     defaultProjectId: scope.projectId,
@@ -34,7 +34,7 @@ export async function startMiniE2eApp(options = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json());
-  app.use(devscope.middleware("mini-gateway", scope));
+  app.use(devmonitor.middleware("mini-gateway", scope));
 
   const appBase = `http://127.0.0.1:${appPort}`;
   const dashboardBase = `http://127.0.0.1:${dashboardPort}`;
@@ -46,9 +46,9 @@ export async function startMiniE2eApp(options = {}) {
         : undefined;
     const headers = {
       "content-type": "application/json",
-      "x-devscope-tenant-id": scope.tenantId,
-      "x-devscope-project-id": scope.projectId,
-      "x-devscope-environment": scope.environment,
+      "x-devmonitor-tenant-id": scope.tenantId,
+      "x-devmonitor-project-id": scope.projectId,
+      "x-devmonitor-environment": scope.environment,
       ...extraHeaders,
     };
 
@@ -173,17 +173,17 @@ export async function startMiniE2eApp(options = {}) {
   });
 
   app.get("/catalog", async (req, res) => {
-    const traceId = req.devscope.traceId;
+    const traceId = req.devmonitor.traceId;
     const duration = randomInt(6, 20);
     await sleep(duration);
 
-    devscope.instrument.sql(traceId, {
+    devmonitor.instrument.sql(traceId, {
       query: "SELECT id, price FROM catalog WHERE active = true LIMIT 10",
       durationMs: duration,
       status: "ok",
     });
 
-    req.devscope.addEvent({
+    req.devmonitor.addEvent({
       type: "otel",
       name: "rpc.catalog",
       durationMs: randomInt(10, 25),
@@ -201,33 +201,33 @@ export async function startMiniE2eApp(options = {}) {
   });
 
   app.get("/checkout", async (req, res) => {
-    const traceId = req.devscope.traceId;
+    const traceId = req.devmonitor.traceId;
     const shouldFail = String(req.query.fail ?? "0") === "1";
     const shouldSlow = String(req.query.slow ?? "0") === "1";
 
     await sleep(shouldSlow ? randomInt(180, 320) : randomInt(25, 80));
 
-    devscope.instrument.redis(traceId, {
+    devmonitor.instrument.redis(traceId, {
       command: "GET",
       key: "cart:user:42",
       durationMs: randomInt(4, 18),
       status: "ok",
     });
 
-    devscope.instrument.sql(traceId, {
+    devmonitor.instrument.sql(traceId, {
       query: "SELECT id, status, total FROM orders WHERE user_id = $1",
       durationMs: shouldSlow ? randomInt(90, 210) : randomInt(25, 70),
       status: shouldFail ? "error" : "ok",
     });
 
-    devscope.instrument.kafka(traceId, {
+    devmonitor.instrument.kafka(traceId, {
       topic: "checkout-events",
       action: "publish",
       durationMs: randomInt(8, 24),
       status: shouldFail ? "error" : "ok",
     });
 
-    req.devscope.addEvent({
+    req.devmonitor.addEvent({
       type: "otel",
       name: "rpc.payments",
       durationMs: shouldSlow ? randomInt(140, 260) : randomInt(30, 90),
@@ -241,7 +241,7 @@ export async function startMiniE2eApp(options = {}) {
       },
     });
 
-    req.devscope.addEvent({
+    req.devmonitor.addEvent({
       type: "otel",
       name: "rpc.inventory",
       durationMs: randomInt(15, 60),

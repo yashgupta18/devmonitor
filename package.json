@@ -7,7 +7,7 @@
     "devmonitor": "src/cli.js"
   },
   "scripts": {
-    "devscope:start": "node ./src/cli.js start",
+    "devmonitor:start": "node ./src/cli.js start",
     "example": "node ./examples/local-debug-app.js",
     "example:mini": "node ./examples/mini-e2e-app.js",
     "test": "node --test"
@@ -29,11 +29,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yashgupta18/devscope.git"
+    "url": "git+https://github.com/yashgupta18/devmonitor.git"
   },
-  "homepage": "https://github.com/yashgupta18/devscope#readme",
+  "homepage": "https://github.com/yashgupta18/devmonitor#readme",
   "bugs": {
-    "url": "https://github.com/yashgupta18/devscope/issues"
+    "url": "https://github.com/yashgupta18/devmonitor/issues"
   },
   "engines": {
     "node": ">=18",

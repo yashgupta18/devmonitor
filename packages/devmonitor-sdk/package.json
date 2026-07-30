@@ -1,7 +1,7 @@
 {
-  "name": "@devscope/sdk",
+  "name": "@devmonitor/sdk",
   "version": "0.1.0",
-  "description": "Node SDK bridge for sending OpenTelemetry spans to DevScope",
+  "description": "Node SDK bridge for sending OpenTelemetry spans to DevMonitor",
   "type": "module",
   "main": "./index.js",
   "exports": {

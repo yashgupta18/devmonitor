@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 import express from "express";
-import { createDevScope } from "./devscope/index.js";
+import { createDevMonitor } from "./devmonitor/index.js";
 import { startExampleApp } from "../examples/local-debug-app.js";
 
 function parseArgs(argv) {
   const args = new Set(argv.slice(2));
-  const rawRemoteKeys = String(process.env.DEVSCOPE_REMOTE_INGEST_KEYS ?? "");
+  const rawRemoteKeys = String(process.env.DEVMONITOR_REMOTE_INGEST_KEYS ?? "");
   const remoteKeys = rawRemoteKeys
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-  const rawAuthKeys = String(process.env.DEVSCOPE_API_KEYS ?? "");
+  const rawAuthKeys = String(process.env.DEVMONITOR_API_KEYS ?? "");
   const authKeys = rawAuthKeys
     .split(",")
     .map((value) => value.trim())
@@ -27,12 +27,12 @@ function parseArgs(argv) {
   return {
     command: argv[2],
     example: args.has("--example"),
-    dashboardPort: Number(process.env.DEVSCOPE_DASHBOARD_PORT ?? 4318),
-    appPort: Number(process.env.DEVSCOPE_APP_PORT ?? 3000),
+    dashboardPort: Number(process.env.DEVMONITOR_DASHBOARD_PORT ?? 4318),
+    appPort: Number(process.env.DEVMONITOR_APP_PORT ?? 3000),
     scope: {
-      tenantId: process.env.DEVSCOPE_TENANT_ID,
-      projectId: process.env.DEVSCOPE_PROJECT_ID,
-      environment: process.env.DEVSCOPE_ENVIRONMENT,
+      tenantId: process.env.DEVMONITOR_TENANT_ID,
+      projectId: process.env.DEVMONITOR_PROJECT_ID,
+      environment: process.env.DEVMONITOR_ENVIRONMENT,
     },
     remoteIngest:
       remoteKeys.length > 0
@@ -40,44 +40,44 @@ function parseArgs(argv) {
             enabled: true,
             apiKeys: remoteKeys,
             rateLimitWindowMs: Number(
-              process.env.DEVSCOPE_REMOTE_RATE_LIMIT_WINDOW_MS ?? 60_000,
+              process.env.DEVMONITOR_REMOTE_RATE_LIMIT_WINDOW_MS ?? 60_000,
             ),
             rateLimitMaxRequests: Number(
-              process.env.DEVSCOPE_REMOTE_RATE_LIMIT_MAX_REQUESTS ?? 120,
+              process.env.DEVMONITOR_REMOTE_RATE_LIMIT_MAX_REQUESTS ?? 120,
             ),
             maxSpansPerRequest: Number(
-              process.env.DEVSCOPE_REMOTE_MAX_SPANS_PER_REQUEST ?? 500,
+              process.env.DEVMONITOR_REMOTE_MAX_SPANS_PER_REQUEST ?? 500,
             ),
           }
         : { enabled: false, apiKeys: [] },
-    storageBackend: process.env.DEVSCOPE_STORAGE_BACKEND ?? "memory",
-    traceStorePath: process.env.DEVSCOPE_TRACE_STORE_PATH,
+    storageBackend: process.env.DEVMONITOR_STORAGE_BACKEND ?? "memory",
+    traceStorePath: process.env.DEVMONITOR_TRACE_STORE_PATH,
     timeSeriesRetentionMinutes: Number(
-      process.env.DEVSCOPE_TIMESERIES_RETENTION_MINUTES ?? 1440,
+      process.env.DEVMONITOR_TIMESERIES_RETENTION_MINUTES ?? 1440,
     ),
     security: {
-      enabled: String(process.env.DEVSCOPE_AUTH_ENABLED ?? "false") === "true",
+      enabled: String(process.env.DEVMONITOR_AUTH_ENABLED ?? "false") === "true",
       apiKeys: authKeys,
-      auditMaxEntries: Number(process.env.DEVSCOPE_AUDIT_MAX_ENTRIES ?? 5000),
+      auditMaxEntries: Number(process.env.DEVMONITOR_AUDIT_MAX_ENTRIES ?? 5000),
     },
     alerting: {
       enabled:
-        String(process.env.DEVSCOPE_ALERTING_ENABLED ?? "false") === "true",
-      slackWebhookUrl: process.env.DEVSCOPE_SLACK_WEBHOOK_URL,
-      pagerDutyWebhookUrl: process.env.DEVSCOPE_PAGERDUTY_WEBHOOK_URL,
-      webhookUrl: process.env.DEVSCOPE_WEBHOOK_URL,
+        String(process.env.DEVMONITOR_ALERTING_ENABLED ?? "false") === "true",
+      slackWebhookUrl: process.env.DEVMONITOR_SLACK_WEBHOOK_URL,
+      pagerDutyWebhookUrl: process.env.DEVMONITOR_PAGERDUTY_WEBHOOK_URL,
+      webhookUrl: process.env.DEVMONITOR_WEBHOOK_URL,
     },
     cluster: {
       enabled:
-        String(process.env.DEVSCOPE_CLUSTER_ENABLED ?? "false") === "true",
-      deploymentMode: process.env.DEVSCOPE_DEPLOYMENT_MODE ?? "single-node",
-      ttlMs: Number(process.env.DEVSCOPE_CLUSTER_TTL_MS ?? 30_000),
+        String(process.env.DEVMONITOR_CLUSTER_ENABLED ?? "false") === "true",
+      deploymentMode: process.env.DEVMONITOR_DEPLOYMENT_MODE ?? "single-node",
+      ttlMs: Number(process.env.DEVMONITOR_CLUSTER_TTL_MS ?? 30_000),
     },
   };
 }
 
 async function startStandalone(options) {
-  const devscope = createDevScope({
+  const devmonitor = createDevMonitor({
     dashboardPort: options.dashboardPort,
     defaultTenantId: options.scope.tenantId,
     defaultProjectId: options.scope.projectId,
@@ -92,18 +92,18 @@ async function startStandalone(options) {
   });
   const app = express();
   app.disable("x-powered-by");
-  app.use(devscope.middleware("standalone-app", options.scope));
+  app.use(devmonitor.middleware("standalone-app", options.scope));
 
   app.get("/", (_req, res) => {
     res.json({
-      message: "DevScope standalone app running",
-      hint: "Use devscope start --example for full flow simulation",
+      message: "DevMonitor standalone app running",
+      hint: "Use devmonitor start --example for full flow simulation",
     });
   });
 
   app.listen(options.appPort, () => {
     console.log(
-      `[devscope] app running on http://localhost:${options.appPort}`,
+      `[devmonitor] app running on http://localhost:${options.appPort}`,
     );
   });
 }
@@ -112,7 +112,7 @@ async function main() {
   const options = parseArgs(process.argv);
 
   if (options.command !== "start") {
-    console.log("Usage: devscope start [--example]");
+    console.log("Usage: devmonitor start [--example]");
     process.exit(1);
   }
 
@@ -138,6 +138,6 @@ async function main() {
 try {
   await main();
 } catch (error) {
-  console.error("[devscope] failed to start", error);
+  console.error("[devmonitor] failed to start", error);
   process.exit(1);
 }

@@ -1,32 +1,32 @@
-# DevScope Production Connectors and Security Hardening
+# DevMonitor Production Connectors and Security Hardening
 
-This guide explains how to run DevScope in multi-service production-like mode with secure ingestion, role-based access, and operational hooks.
+This guide explains how to run DevMonitor in multi-service production-like mode with secure ingestion, role-based access, and operational hooks.
 
 ## 1. Storage and Retention
 
 Use file-backed trace storage and tune time-series retention:
 
 ```bash
-DEVSCOPE_STORAGE_BACKEND=file \
-DEVSCOPE_TRACE_STORE_PATH=.devscope/prod/traces.ndjson \
-DEVSCOPE_TIMESERIES_RETENTION_MINUTES=10080 \
-npm run devscope:start -- --example
+DEVMONITOR_STORAGE_BACKEND=file \
+DEVMONITOR_TRACE_STORE_PATH=.devmonitor/prod/traces.ndjson \
+DEVMONITOR_TIMESERIES_RETENTION_MINUTES=10080 \
+npm run devmonitor:start -- --example
 ```
 
 Notes:
-- `DEVSCOPE_STORAGE_BACKEND=file` enables durable trace persistence.
-- `DEVSCOPE_TIMESERIES_RETENTION_MINUTES` controls minute-bucket retention for SLO/burn-rate views.
+- `DEVMONITOR_STORAGE_BACKEND=file` enables durable trace persistence.
+- `DEVMONITOR_TIMESERIES_RETENTION_MINUTES` controls minute-bucket retention for SLO/burn-rate views.
 
 ## 2. Remote Ingest Hardening
 
 Enable API-key protected remote ingest with request limits:
 
 ```bash
-DEVSCOPE_REMOTE_INGEST_KEYS=collector-a,collector-b \
-DEVSCOPE_REMOTE_RATE_LIMIT_MAX_REQUESTS=240 \
-DEVSCOPE_REMOTE_RATE_LIMIT_WINDOW_MS=60000 \
-DEVSCOPE_REMOTE_MAX_SPANS_PER_REQUEST=1000 \
-npm run devscope:start
+DEVMONITOR_REMOTE_INGEST_KEYS=collector-a,collector-b \
+DEVMONITOR_REMOTE_RATE_LIMIT_MAX_REQUESTS=240 \
+DEVMONITOR_REMOTE_RATE_LIMIT_WINDOW_MS=60000 \
+DEVMONITOR_REMOTE_MAX_SPANS_PER_REQUEST=1000 \
+npm run devmonitor:start
 ```
 
 ## 3. RBAC, Authn/Authz, and Audit Logs
@@ -34,10 +34,10 @@ npm run devscope:start
 Enable auth and define role-key mappings with format `role:key`:
 
 ```bash
-DEVSCOPE_AUTH_ENABLED=true \
-DEVSCOPE_API_KEYS=viewer:viewer-key,editor:editor-key,admin:admin-key \
-DEVSCOPE_AUDIT_MAX_ENTRIES=20000 \
-npm run devscope:start
+DEVMONITOR_AUTH_ENABLED=true \
+DEVMONITOR_API_KEYS=viewer:viewer-key,editor:editor-key,admin:admin-key \
+DEVMONITOR_AUDIT_MAX_ENTRIES=20000 \
+npm run devmonitor:start
 ```
 
 Role permissions:
@@ -53,11 +53,11 @@ Audit endpoint:
 Enable outbound alert hooks for incident context notifications:
 
 ```bash
-DEVSCOPE_ALERTING_ENABLED=true \
-DEVSCOPE_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/... \
-DEVSCOPE_PAGERDUTY_WEBHOOK_URL=https://events.pagerduty.com/v2/enqueue \
-DEVSCOPE_WEBHOOK_URL=https://your-internal-alert-gateway/hooks/devscope \
-npm run devscope:start
+DEVMONITOR_ALERTING_ENABLED=true \
+DEVMONITOR_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/... \
+DEVMONITOR_PAGERDUTY_WEBHOOK_URL=https://events.pagerduty.com/v2/enqueue \
+DEVMONITOR_WEBHOOK_URL=https://your-internal-alert-gateway/hooks/devmonitor \
+npm run devmonitor:start
 ```
 
 Alert APIs:
@@ -69,10 +69,10 @@ Alert APIs:
 Enable cluster heartbeat tracking and set HA deployment mode:
 
 ```bash
-DEVSCOPE_CLUSTER_ENABLED=true \
-DEVSCOPE_DEPLOYMENT_MODE=ha \
-DEVSCOPE_CLUSTER_TTL_MS=30000 \
-npm run devscope:start
+DEVMONITOR_CLUSTER_ENABLED=true \
+DEVMONITOR_DEPLOYMENT_MODE=ha \
+DEVMONITOR_CLUSTER_TTL_MS=30000 \
+npm run devmonitor:start
 ```
 
 Cluster APIs:

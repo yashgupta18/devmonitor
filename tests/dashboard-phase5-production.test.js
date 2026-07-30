@@ -1,18 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevScopeCore } from "../src/devscope/core.js";
-import { createDashboardServer } from "../src/devscope/dashboard.js";
+import { DevMonitorCore } from "../src/devmonitor/core.js";
+import { createDashboardServer } from "../src/devmonitor/dashboard.js";
 
 function authHeaders(apiKey) {
   return {
     "content-type": "application/json",
-    "x-devscope-api-key": apiKey,
+    "x-devmonitor-api-key": apiKey,
   };
 }
 
 async function createServer() {
   const sentAlerts = [];
-  const core = new DevScopeCore({ maxTraces: 200 });
+  const core = new DevMonitorCore({ maxTraces: 200 });
   const dashboard = createDashboardServer(
     core,
     {},
@@ -124,7 +124,7 @@ test("SLO/timeseries, cluster heartbeat, and incident alert hooks work", async (
       method: "POST",
       headers: {
         ...authHeaders("editor-key"),
-        "x-devscope-environment": "prod",
+        "x-devmonitor-environment": "prod",
       },
       body: JSON.stringify({
         serviceName: "checkout-service",

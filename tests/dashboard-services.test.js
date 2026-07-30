@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevScopeCore } from "../src/devscope/core.js";
-import { createDashboardServer } from "../src/devscope/dashboard.js";
+import { DevMonitorCore } from "../src/devmonitor/core.js";
+import { createDashboardServer } from "../src/devmonitor/dashboard.js";
 
 async function createServer() {
-  const core = new DevScopeCore({ maxTraces: 100 });
+  const core = new DevMonitorCore({ maxTraces: 100 });
   const dashboard = createDashboardServer(core, {}, { dashboardPort: 0 });
   const address = dashboard.server.address();
   const port = typeof address === "object" && address ? address.port : 4318;
@@ -40,9 +40,9 @@ async function ingestSpan(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devscope-tenant-id": tenantId,
-      "x-devscope-project-id": projectId,
-      "x-devscope-environment": environment,
+      "x-devmonitor-tenant-id": tenantId,
+      "x-devmonitor-project-id": projectId,
+      "x-devmonitor-environment": environment,
     },
     body: JSON.stringify({
       serviceName,

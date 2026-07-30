@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DevScopeCore } from "../src/devscope/core.js";
-import { createDashboardServer } from "../src/devscope/dashboard.js";
+import { DevMonitorCore } from "../src/devmonitor/core.js";
+import { createDashboardServer } from "../src/devmonitor/dashboard.js";
 
 async function startServer(core) {
   const dashboard = createDashboardServer(core, {}, { dashboardPort: 0 });
@@ -19,7 +19,7 @@ async function startServer(core) {
 }
 
 test("GET /api/traces filters by service, cluster, namespace, and environment", async () => {
-  const core = new DevScopeCore();
+  const core = new DevMonitorCore();
 
   const traceA = core.createTrace({
     method: "GET",

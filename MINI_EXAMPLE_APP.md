@@ -41,7 +41,7 @@ Open the mini app landing page at:
 Optional custom ports:
 
 ```bash
-DEVSCOPE_DASHBOARD_PORT=4328 DEVSCOPE_MINI_APP_PORT=3051 npm run example:mini
+DEVMONITOR_DASHBOARD_PORT=4328 DEVMONITOR_MINI_APP_PORT=3051 npm run example:mini
 ```
 
 If `http://localhost:3050/` shows `Cannot GET /` with CSP `default-src 'none'`, an older mini app process is still running. Stop it and start again:
@@ -108,5 +108,5 @@ The mini app uses these defaults unless overridden:
 You can override using:
 
 ```bash
-DEVSCOPE_TENANT_ID=team-x DEVSCOPE_PROJECT_ID=checkout DEVSCOPE_ENVIRONMENT=staging npm run example:mini
+DEVMONITOR_TENANT_ID=team-x DEVMONITOR_PROJECT_ID=checkout DEVMONITOR_ENVIRONMENT=staging npm run example:mini
 ```

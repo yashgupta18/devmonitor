@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevScopeCore } from "../src/devscope/core.js";
-import { createDashboardServer } from "../src/devscope/dashboard.js";
+import { DevMonitorCore } from "../src/devmonitor/core.js";
+import { createDashboardServer } from "../src/devmonitor/dashboard.js";
 
 async function createServer() {
-  const core = new DevScopeCore({ maxTraces: 200 });
+  const core = new DevMonitorCore({ maxTraces: 200 });
   const dashboard = createDashboardServer(core, {}, { dashboardPort: 0 });
   const address = dashboard.server.address();
   const port = typeof address === "object" && address ? address.port : 4318;
@@ -36,9 +36,9 @@ test("gitops events can be recorded and correlated to trace impact", async (t) =
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devscope-tenant-id": "team-dev",
-      "x-devscope-project-id": "checkout",
-      "x-devscope-environment": "prod",
+      "x-devmonitor-tenant-id": "team-dev",
+      "x-devmonitor-project-id": "checkout",
+      "x-devmonitor-environment": "prod",
     },
     body: JSON.stringify({
       id: "deploy-1",
@@ -58,9 +58,9 @@ test("gitops events can be recorded and correlated to trace impact", async (t) =
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devscope-tenant-id": "team-dev",
-      "x-devscope-project-id": "checkout",
-      "x-devscope-environment": "prod",
+      "x-devmonitor-tenant-id": "team-dev",
+      "x-devmonitor-project-id": "checkout",
+      "x-devmonitor-environment": "prod",
     },
     body: JSON.stringify({
       serviceName: "checkout-service",

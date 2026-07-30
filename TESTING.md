@@ -3,7 +3,7 @@
 This file explains what is implemented now, how to run it, and how to verify features.
 
 ## Implemented Features (Current)
-1. `devscope start` command.
+1. `devmonitor start` command.
 2. Local dashboard at `http://localhost:4318`.
 3. Live request list with per-request durations.
 4. Per-request timeline for simulated downstream activity:
@@ -12,7 +12,7 @@ This file explains what is implemented now, how to run it, and how to verify fea
 - Kafka publish events
 - Background job events
 5. Example app route for generating traces quickly.
-6. Node OpenTelemetry bridge (`@devscope/sdk`) with span ingestion.
+6. Node OpenTelemetry bridge (`@devmonitor/sdk`) with span ingestion.
 7. OTel demo endpoint with parent-child span correlation (`/otel-checkout`).
 
 ## Setup
@@ -28,10 +28,10 @@ npm install
 npm test
 ```
 
-3. Start DevScope with the sample app:
+3. Start DevMonitor with the sample app:
 
 ```bash
-npm run devscope:start -- --example
+npm run devmonitor:start -- --example
 ```
 
 Optional: run the mini end-to-end scenario app:
@@ -43,10 +43,10 @@ curl -X POST http://localhost:3050/scenario/full
 
 Detailed walkthrough: `MINI_EXAMPLE_APP.md`.
 
-If port `4318` is already in use, run DevScope on alternate ports:
+If port `4318` is already in use, run DevMonitor on alternate ports:
 
 ```bash
-DEVSCOPE_DASHBOARD_PORT=4328 DEVSCOPE_APP_PORT=3010 npm run devscope:start -- --example
+DEVMONITOR_DASHBOARD_PORT=4328 DEVMONITOR_APP_PORT=3010 npm run devmonitor:start -- --example
 ```
 
 4. Open the dashboard:
@@ -66,8 +66,8 @@ curl http://localhost:3000/otel-checkout
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ./packages/devscope-python
-export DEVSCOPE_INGEST_URL=http://localhost:4328/api/ingest/otel
+python -m pip install -e ./packages/devmonitor-python
+export DEVMONITOR_INGEST_URL=http://localhost:4328/api/ingest/otel
 python ./examples/python-otel-example.py
 ```
 
@@ -75,7 +75,7 @@ python ./examples/python-otel-example.py
 1. New requests appear in the dashboard table.
 2. Clicking a request opens a timeline panel.
 3. Timeline includes events labeled `SQL`, `REDIS`, `KAFKA`, and `JOB`.
-4. `x-devscope-trace-id` response header is present on API responses.
+4. `x-devmonitor-trace-id` response header is present on API responses.
 5. OTel route generates a single trace with multiple related span events.
 6. Use dashboard filters to inspect OTel trace data:
 - Method filter: `OTEL` (or `GET` after root-span enrichment)
@@ -133,7 +133,7 @@ python ./examples/python-otel-example.py
 - [ ] Cross-service query works: `GET /api/traces?service=...&cluster=...&namespace=...&environment=...`.
 - [ ] SLO endpoint responds: `GET /api/slo`.
 - [ ] Time-series endpoint responds: `GET /api/timeseries`.
-- [ ] RBAC is enforced when auth enabled (`DEVSCOPE_AUTH_ENABLED=true`).
+- [ ] RBAC is enforced when auth enabled (`DEVMONITOR_AUTH_ENABLED=true`).
 - [ ] Audit endpoint responds for admin key: `GET /api/audit`.
 - [ ] Alert test endpoint responds for admin key: `POST /api/alerts/test`.
 - [ ] Cluster endpoints respond: `POST /api/cluster/heartbeat`, `GET /api/cluster/status`.
@@ -146,7 +146,7 @@ python ./examples/python-otel-example.py
 ## Current Limitations
 1. SQL/Redis/Kafka/Job events are simulated in the example app, not real drivers yet.
 2. No persistent storage yet (in-memory retention only).
-3. Python SDK currently sends spans over DevScope HTTP ingest API (not OTLP exporter yet).
+3. Python SDK currently sends spans over DevMonitor HTTP ingest API (not OTLP exporter yet).
 4. GitHub intelligence uses local git commit metadata + heuristic keyword scoring (no direct GitHub API integration yet).
 5. Remote ingest rate limiting is currently in-memory per API key + source IP.
 6. Tenant/project registry is inferred from retained in-memory traces.
@@ -156,7 +156,7 @@ python ./examples/python-otel-example.py
 10. Incident correlation currently uses in-memory traces with heuristic candidate selection (errors, latency spikes, or incident text match).
 
 ## Included Automated Tests
-File: `tests/devscope-core.test.js`
+File: `tests/devmonitor-core.test.js`
 1. trace creation and completion,
 2. retention enforcement,
 3. SQL and Redis event correlation.

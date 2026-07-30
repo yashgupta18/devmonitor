@@ -1,19 +1,19 @@
-# devscope (Python)
+# devmonitor (Python)
 
-Python SDK bridge for sending OpenTelemetry-style spans to a local DevScope instance.
+Python SDK bridge for sending OpenTelemetry-style spans to a local DevMonitor instance.
 
 ## Install (editable)
 
 ```bash
-pip install -e ./packages/devscope-python
+pip install -e ./packages/devmonitor-python
 ```
 
 ## Quick start
 
 ```python
-from devscope import DevScopeClient
+from devmonitor import DevMonitorClient
 
-client = DevScopeClient(
+client = DevMonitorClient(
     ingest_url="http://localhost:4318/api/ingest/otel",
     service_name="python-checkout-service",
 )

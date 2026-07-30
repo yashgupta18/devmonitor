@@ -1,10 +1,10 @@
-## DevScope Plan: Narrow MVP, Then Scale Systematically
+## DevMonitor Plan: Narrow MVP, Then Scale Systematically
 
 Homepage message:
 Debug your distributed system in 30 seconds.
 
 Core product statement:
-DevScope is an open-source engineering intelligence platform built on OpenTelemetry, starting with local debugging and expanding to production intelligence.
+DevMonitor is an open-source engineering intelligence platform built on OpenTelemetry, starting with local debugging and expanding to production intelligence.
 
 ## Product Strategy
 
@@ -42,7 +42,7 @@ MVP goal:
 Run one command, open dashboard, immediately see request flow and bottlenecks locally.
 
 Command:
-devscope start
+devmonitor start
 
 MVP includes:
 1. Live HTTP request tracing.
@@ -71,7 +71,7 @@ Outcome:
 Usable local tool with one-screen request intelligence.
 
 Deliverables:
-1. Browser dashboard auto-opens from devscope start.
+1. Browser dashboard auto-opens from devmonitor start.
 2. Correlated timeline for HTTP, SQL, Redis, Kafka, jobs.
 3. Basic filters: endpoint, status code, latency, errors.
 4. Error detail panel (stack trace and metadata).
@@ -84,11 +84,11 @@ Acceptance gates:
 ### Phase 2 (3-4 Weeks): OpenTelemetry Integration
 
 Outcome:
-DevScope becomes instrumentation-friendly and easier to adopt.
+DevMonitor becomes instrumentation-friendly and easier to adopt.
 
 Deliverables:
-1. Node package: npm install @devscope/sdk.
-2. Python package: pip install devscope.
+1. Node package: npm install @devmonitor/sdk.
+2. Python package: pip install devmonitor.
 3. Ingest traces from OpenTelemetry-compatible spans.
 4. Preserve correlation in same dashboard views.
 

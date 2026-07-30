@@ -5,7 +5,7 @@ Status legend:
 - [ ] Pending
 
 ### Phase 1 - Narrow MVP (Current)
-- [x] Bootstrap Node project and CLI entrypoint (`devscope start`).
+- [x] Bootstrap Node project and CLI entrypoint (`devmonitor start`).
 - [x] Implement in-memory trace store and request middleware.
 - [x] Build dashboard API and static one-screen timeline UI.
 - [x] Add example backend flow with HTTP + SQL + Redis + Kafka + Job simulated events.
@@ -15,8 +15,8 @@ Status legend:
 - [x] Add simple endpoint/status filters in dashboard UI.
 
 ### Phase 2 - OpenTelemetry Integration
-- [x] Add Node SDK package surface (`@devscope/sdk`).
-- [x] Add Python package surface (`devscope`).
+- [x] Add Node SDK package surface (`@devmonitor/sdk`).
+- [x] Add Python package surface (`devmonitor`).
 - [x] Map OpenTelemetry spans into devmonitor event schema.
 - [x] Validate context propagation with real instrumented service.
 

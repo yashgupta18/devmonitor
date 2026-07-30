@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Send OpenTelemetry-style spans from Python into DevScope."""
+"""Send OpenTelemetry-style spans from Python into DevMonitor."""
 
 import os
 
-from devscope import DevScopeClient
+from devmonitor import DevMonitorClient
 
 
 def main() -> None:
     ingest_url = os.getenv(
-        "DEVSCOPE_INGEST_URL", "http://localhost:4318/api/ingest/otel"
+        "DEVMONITOR_INGEST_URL", "http://localhost:4318/api/ingest/otel"
     )
-    service_name = os.getenv("DEVSCOPE_SERVICE_NAME", "python-checkout-service")
+    service_name = os.getenv("DEVMONITOR_SERVICE_NAME", "python-checkout-service")
 
-    client = DevScopeClient(
+    client = DevMonitorClient(
         ingest_url=ingest_url,
         service_name=service_name,
     )
@@ -60,7 +60,7 @@ def main() -> None:
         ):
             _ = {"published": True}
 
-    print("Sent Python spans to DevScope. Check dashboard filters for /py-checkout")
+    print("Sent Python spans to DevMonitor. Check dashboard filters for /py-checkout")
 
 
 if __name__ == "__main__":

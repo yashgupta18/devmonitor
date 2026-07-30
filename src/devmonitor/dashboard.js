@@ -27,7 +27,7 @@ function parseRemoteIngestConfig(config = {}) {
 }
 
 function extractApiKey(req) {
-  const explicitKey = req.header("x-devscope-api-key");
+  const explicitKey = req.header("x-devmonitor-api-key");
   if (explicitKey && explicitKey.trim().length > 0) {
     return explicitKey.trim();
   }
@@ -83,13 +83,13 @@ function getOptionalQueryString(req, key) {
 function resolveScopeFromRequest(req, body = {}) {
   return {
     tenantId:
-      parseScopeValue(req.header("x-devscope-tenant-id")) ??
+      parseScopeValue(req.header("x-devmonitor-tenant-id")) ??
       parseScopeValue(body.tenantId),
     projectId:
-      parseScopeValue(req.header("x-devscope-project-id")) ??
+      parseScopeValue(req.header("x-devmonitor-project-id")) ??
       parseScopeValue(body.projectId),
     environment:
-      parseScopeValue(req.header("x-devscope-environment")) ??
+      parseScopeValue(req.header("x-devmonitor-environment")) ??
       parseScopeValue(body.environment),
   };
 }
@@ -625,7 +625,7 @@ export function createDashboardServer(core, connectors = {}, options = {}) {
         title:
           typeof req.body?.title === "string"
             ? req.body.title
-            : "DevScope test alert",
+            : "DevMonitor test alert",
         message:
           typeof req.body?.message === "string"
             ? req.body.message
@@ -974,7 +974,7 @@ export function createDashboardServer(core, connectors = {}, options = {}) {
 
   const server = app.listen(dashboardPort, () => {
     console.log(
-      `[devscope] dashboard running on http://localhost:${dashboardPort}`,
+      `[devmonitor] dashboard running on http://localhost:${dashboardPort}`,
     );
   });
 

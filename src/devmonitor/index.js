@@ -1,4 +1,4 @@
-import { DevScopeCore } from "./core.js";
+import { DevMonitorCore } from "./core.js";
 import { createDashboardServer } from "./dashboard.js";
 import { createDockerConnector } from "./docker-connector.js";
 import { createKubernetesConnector } from "./kubernetes-connector.js";
@@ -6,8 +6,8 @@ import { createEcsConnector } from "./ecs-connector.js";
 import { createNomadConnector } from "./nomad-connector.js";
 import { createGitHubIntelligence } from "./github-intelligence.js";
 
-export function createDevScope(options = {}) {
-  const core = new DevScopeCore(options);
+export function createDevMonitor(options = {}) {
+  const core = new DevMonitorCore(options);
   const githubIntelligence = createGitHubIntelligence(
     options.githubIntelligence ?? {},
   );

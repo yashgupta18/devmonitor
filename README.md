@@ -52,7 +52,7 @@ npm test
 3. Start devmonitor with the example app:
 
 ```bash
-npm run devscope:start -- --example
+npm run devmonitor:start -- --example
 ```
 
 4. Open:
@@ -84,7 +84,7 @@ See full setup and verification steps in `MINI_EXAMPLE_APP.md`.
 Run on alternate ports:
 
 ```bash
-DEVSCOPE_DASHBOARD_PORT=4328 DEVSCOPE_APP_PORT=3010 npm run devscope:start -- --example
+DEVMONITOR_DASHBOARD_PORT=4328 DEVMONITOR_APP_PORT=3010 npm run devmonitor:start -- --example
 ```
 
 Then open:
@@ -99,13 +99,13 @@ Then open:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ./packages/devscope-python
+python -m pip install -e ./packages/devmonitor-python
 ```
 
 2. Point Python client to devmonitor ingest endpoint:
 
 ```bash
-export DEVSCOPE_INGEST_URL=http://localhost:4328/api/ingest/otel
+export DEVMONITOR_INGEST_URL=http://localhost:4328/api/ingest/otel
 python ./examples/python-otel-example.py
 ```
 
@@ -176,23 +176,23 @@ devmonitor start
 Local development command:
 
 ```bash
-npm run devscope:start
+npm run devmonitor:start
 ```
 
 Local development with sample app:
 
 ```bash
-npm run devscope:start -- --example
+npm run devmonitor:start -- --example
 ```
 
 Enable secure remote ingest (example):
 
 ```bash
-DEVSCOPE_REMOTE_INGEST_KEYS=team-key-1,team-key-2 \
-DEVSCOPE_REMOTE_RATE_LIMIT_MAX_REQUESTS=120 \
-DEVSCOPE_REMOTE_RATE_LIMIT_WINDOW_MS=60000 \
-DEVSCOPE_REMOTE_MAX_SPANS_PER_REQUEST=500 \
-npm run devscope:start
+DEVMONITOR_REMOTE_INGEST_KEYS=team-key-1,team-key-2 \
+DEVMONITOR_REMOTE_RATE_LIMIT_MAX_REQUESTS=120 \
+DEVMONITOR_REMOTE_RATE_LIMIT_WINDOW_MS=60000 \
+DEVMONITOR_REMOTE_MAX_SPANS_PER_REQUEST=500 \
+npm run devmonitor:start
 ```
 
 Send remote spans with API key:
@@ -200,7 +200,7 @@ Send remote spans with API key:
 ```bash
 curl -X POST http://localhost:4318/api/remote/ingest/otel \
   -H "content-type: application/json" \
-  -H "x-devscope-api-key: team-key-1" \
+  -H "x-devmonitor-api-key: team-key-1" \
   -d '{"serviceName":"orders-service","spans":[{"traceId":"abc","spanId":"def","name":"http.request"}]}'
 ```
 
@@ -209,9 +209,9 @@ Attach tenant/project/environment context to ingest calls:
 ```bash
 curl -X POST http://localhost:4318/api/ingest/otel \
   -H "content-type: application/json" \
-  -H "x-devscope-tenant-id: team-red" \
-  -H "x-devscope-project-id: checkout" \
-  -H "x-devscope-environment: prod" \
+  -H "x-devmonitor-tenant-id: team-red" \
+  -H "x-devmonitor-project-id: checkout" \
+  -H "x-devmonitor-environment: prod" \
   -d '{"serviceName":"checkout-service","span":{"traceId":"scope-1","spanId":"scope-1a","name":"http.request"}}'
 ```
 
@@ -281,9 +281,9 @@ Collect connector telemetry into trace events:
 ```bash
 curl -X POST http://localhost:4318/api/connectors/collect \
   -H "content-type: application/json" \
-  -H "x-devscope-tenant-id: team-ops" \
-  -H "x-devscope-project-id: platform" \
-  -H "x-devscope-environment: prod" \
+  -H "x-devmonitor-tenant-id: team-ops" \
+  -H "x-devmonitor-project-id: platform" \
+  -H "x-devmonitor-environment: prod" \
   -d '{"connector":"docker","serviceName":"ops-collector"}'
 ```
 
@@ -292,9 +292,9 @@ Correlate an incident across services:
 ```bash
 curl -X POST http://localhost:4318/api/incidents/correlate \
   -H "content-type: application/json" \
-  -H "x-devscope-tenant-id: team-ops" \
-  -H "x-devscope-project-id: platform" \
-  -H "x-devscope-environment: prod" \
+  -H "x-devmonitor-tenant-id: team-ops" \
+  -H "x-devmonitor-project-id: platform" \
+  -H "x-devmonitor-environment: prod" \
   -d '{"incident":"checkout failures","limit":400}'
 ```
 
@@ -321,25 +321,25 @@ curl "http://localhost:4318/api/timeseries?windowMinutes=60&environment=prod"
 Set default scope for local app traces:
 
 ```bash
-DEVSCOPE_TENANT_ID=team-red \
-DEVSCOPE_PROJECT_ID=checkout \
-DEVSCOPE_ENVIRONMENT=dev \
-npm run devscope:start -- --example
+DEVMONITOR_TENANT_ID=team-red \
+DEVMONITOR_PROJECT_ID=checkout \
+DEVMONITOR_ENVIRONMENT=dev \
+npm run devmonitor:start -- --example
 ```
 
 Enable file-backed trace store + auth + alerting + HA mode:
 
 ```bash
-DEVSCOPE_STORAGE_BACKEND=file \
-DEVSCOPE_TRACE_STORE_PATH=.devscope/traces.ndjson \
-DEVSCOPE_TIMESERIES_RETENTION_MINUTES=10080 \
-DEVSCOPE_AUTH_ENABLED=true \
-DEVSCOPE_API_KEYS=viewer:viewer-key,editor:editor-key,admin:admin-key \
-DEVSCOPE_ALERTING_ENABLED=true \
-DEVSCOPE_WEBHOOK_URL=https://your-alert-endpoint.example/hooks/devscope \
-DEVSCOPE_CLUSTER_ENABLED=true \
-DEVSCOPE_DEPLOYMENT_MODE=ha \
-npm run devscope:start
+DEVMONITOR_STORAGE_BACKEND=file \
+DEVMONITOR_TRACE_STORE_PATH=.devmonitor/traces.ndjson \
+DEVMONITOR_TIMESERIES_RETENTION_MINUTES=10080 \
+DEVMONITOR_AUTH_ENABLED=true \
+DEVMONITOR_API_KEYS=viewer:viewer-key,editor:editor-key,admin:admin-key \
+DEVMONITOR_ALERTING_ENABLED=true \
+DEVMONITOR_WEBHOOK_URL=https://your-alert-endpoint.example/hooks/devmonitor \
+DEVMONITOR_CLUSTER_ENABLED=true \
+DEVMONITOR_DEPLOYMENT_MODE=ha \
+npm run devmonitor:start
 ```
 
 Production onboarding guide:
@@ -379,7 +379,7 @@ Packaging note:
 
 ## Project Docs
 
-- Plan: `DEVSCOPE_MVP_PLAN.md`
+- Plan: `DEVMONITOR_MVP_PLAN.md`
 - Task tracker: `TASKS.md`
 - Test/validation guide: `TESTING.md`
 - Production architecture: `PRODUCTION_ARCHITECTURE.md`

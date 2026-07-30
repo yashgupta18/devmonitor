@@ -8,14 +8,14 @@ Use a multi-package strategy.
 
 The repository contains distinct deliverables:
 
-1. Root package `devscope`:
+1. Root package `devmonitor`:
 - Local CLI and dashboard runtime.
 
-2. Node SDK package `@devscope/sdk`:
+2. Node SDK package `@devmonitor/sdk`:
 - Integration surface for instrumented Node apps.
 
-3. Python package `devscope`:
-- Python client/SDK in `packages/devscope-python`.
+3. Python package `devmonitor`:
+- Python client/SDK in `packages/devmonitor-python`.
 
 Keeping these as separate publishable artifacts allows teams to adopt only what they need.
 
@@ -23,8 +23,8 @@ Keeping these as separate publishable artifacts allows teams to adopt only what 
 
 1. Keep the root package publishable for CLI use.
 2. Restrict root published contents to runtime assets only.
-3. Publish `@devscope/sdk` independently when versioning and release notes are ready.
-4. Publish Python package from `packages/devscope-python` to PyPI separately.
+3. Publish `@devmonitor/sdk` independently when versioning and release notes are ready.
+4. Publish Python package from `packages/devmonitor-python` to PyPI separately.
 
 ## Follow-ups
 

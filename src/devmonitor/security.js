@@ -54,7 +54,7 @@ export function createSecurityManager(options = {}) {
   }
 
   function resolveApiKey(req) {
-    const explicit = req.header("x-devscope-api-key");
+    const explicit = req.header("x-devmonitor-api-key");
     if (explicit && explicit.trim().length > 0) {
       return explicit.trim();
     }
@@ -135,7 +135,7 @@ export function createSecurityManager(options = {}) {
         return;
       }
 
-      req.devscopeActor = authResult.actor;
+      req.devmonitorActor = authResult.actor;
       addAudit({
         action: req.method,
         resource: req.path,

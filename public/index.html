@@ -712,7 +712,7 @@
 
       function loadSettings() {
         try {
-          const raw = localStorage.getItem("devscope-ui-settings");
+          const raw = localStorage.getItem("devmonitor-ui-settings");
           if (!raw) {
             return;
           }
@@ -728,7 +728,7 @@
 
       function persistSettings() {
         localStorage.setItem(
-          "devscope-ui-settings",
+          "devmonitor-ui-settings",
           JSON.stringify(uiSettings),
         );
       }

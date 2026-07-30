@@ -6,7 +6,7 @@ import {
   parseKubectlServicesJson,
   parseKubectlTopPodsTable,
   summarizeLogText,
-} from "../src/devscope/kubernetes-connector.js";
+} from "../src/devmonitor/kubernetes-connector.js";
 
 test("parses kubectl pods json", () => {
   const stdout = JSON.stringify({

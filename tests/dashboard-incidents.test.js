@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevScopeCore } from "../src/devscope/core.js";
-import { createDashboardServer } from "../src/devscope/dashboard.js";
+import { DevMonitorCore } from "../src/devmonitor/core.js";
+import { createDashboardServer } from "../src/devmonitor/dashboard.js";
 
 async function createIncidentServer() {
-  const core = new DevScopeCore({ maxTraces: 200 });
+  const core = new DevMonitorCore({ maxTraces: 200 });
   const dashboard = createDashboardServer(core, {}, { dashboardPort: 0 });
 
   const address = dashboard.server.address();
@@ -84,9 +84,9 @@ test("incident correlation endpoint returns cross-service relationships", async 
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devscope-tenant-id": "team-a",
-      "x-devscope-project-id": "commerce",
-      "x-devscope-environment": "prod",
+      "x-devmonitor-tenant-id": "team-a",
+      "x-devmonitor-project-id": "commerce",
+      "x-devmonitor-environment": "prod",
     },
     body: JSON.stringify({
       incident: "payment failures",

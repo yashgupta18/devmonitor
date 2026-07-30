@@ -1,4 +1,4 @@
-# DevScope Production Architecture (Phase 5)
+# DevMonitor Production Architecture (Phase 5)
 
 This document defines the first production-grade architecture for multi-service debugging across Kubernetes, Docker, ECS, and Nomad.
 
@@ -39,7 +39,7 @@ This document defines the first production-grade architecture for multi-service 
 ## Ingest Gateway
 
 Responsibilities:
-- Accept OTLP/HTTP and DevScope native ingest.
+- Accept OTLP/HTTP and DevMonitor native ingest.
 - Authenticate source using API key or workload identity.
 - Apply rate limits and payload validation.
 - Route events to trace/log/metric pipelines.

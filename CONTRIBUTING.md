@@ -19,7 +19,7 @@ npm test
 3. Start local example:
 
 ```bash
-npm run devscope:start -- --example
+npm run devmonitor:start -- --example
 ```
 
 ## Pull Request Guidelines

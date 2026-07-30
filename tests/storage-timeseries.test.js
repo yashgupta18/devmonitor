@@ -4,13 +4,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { DevScopeCore } from "../src/devscope/core.js";
+import { DevMonitorCore } from "../src/devmonitor/core.js";
 
 test("file trace store persists traces across core restarts", () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "devscope-store-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "devmonitor-store-"));
   const traceStorePath = path.join(tempDir, "traces.ndjson");
 
-  const first = new DevScopeCore({
+  const first = new DevMonitorCore({
     storageBackend: "file",
     traceStorePath,
     maxTraces: 20,
@@ -26,7 +26,7 @@ test("file trace store persists traces across core restarts", () => {
   });
   first.finishTrace(trace.traceId, { statusCode: 200 });
 
-  const second = new DevScopeCore({
+  const second = new DevMonitorCore({
     storageBackend: "file",
     traceStorePath,
     maxTraces: 20,
@@ -40,7 +40,7 @@ test("file trace store persists traces across core restarts", () => {
 });
 
 test("time-series store captures completed traces and SLO report", () => {
-  const core = new DevScopeCore({ maxTraces: 100 });
+  const core = new DevMonitorCore({ maxTraces: 100 });
 
   for (let index = 0; index < 4; index += 1) {
     const trace = core.createTrace({

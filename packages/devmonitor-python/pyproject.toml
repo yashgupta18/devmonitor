@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "devscope"
+name = "devmonitor"
 version = "0.1.0"
-description = "Python SDK bridge for sending OpenTelemetry-style spans to DevScope"
+description = "Python SDK bridge for sending OpenTelemetry-style spans to DevMonitor"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-  { name = "DevScope Contributors" }
+  { name = "DevMonitor Contributors" }
 ]
 dependencies = []
 

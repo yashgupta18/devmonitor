@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevScopeCore } from "../src/devscope/core.js";
-import { createDashboardServer } from "../src/devscope/dashboard.js";
+import { DevMonitorCore } from "../src/devmonitor/core.js";
+import { createDashboardServer } from "../src/devmonitor/dashboard.js";
 
 async function createScopedServer() {
-  const core = new DevScopeCore({ maxTraces: 100 });
+  const core = new DevMonitorCore({ maxTraces: 100 });
   const dashboard = createDashboardServer(core, {}, { dashboardPort: 0 });
 
   const address = dashboard.server.address();
@@ -36,9 +36,9 @@ test("ingest otel stores tenant/project/environment scope", async (t) => {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devscope-tenant-id": "team-blue",
-      "x-devscope-project-id": "checkout",
-      "x-devscope-environment": "prod",
+      "x-devmonitor-tenant-id": "team-blue",
+      "x-devmonitor-project-id": "checkout",
+      "x-devmonitor-environment": "prod",
     },
     body: JSON.stringify({
       serviceName: "checkout-service",
@@ -80,9 +80,9 @@ test("tenants endpoint summarizes observed projects and environments", async (t)
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-devscope-tenant-id": tenantId,
-        "x-devscope-project-id": projectId,
-        "x-devscope-environment": environment,
+        "x-devmonitor-tenant-id": tenantId,
+        "x-devmonitor-project-id": projectId,
+        "x-devmonitor-environment": environment,
       },
       body: JSON.stringify({
         serviceName: "orders-service",

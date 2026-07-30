@@ -43,7 +43,7 @@ git push --tags
 ## Auto-Publish Workflow
 
 The workflow file is:
-- `.github/workflows/publish-npm.yml`
+- `.github/workflows/publish.yml`
 
 Behavior:
 - Triggers on pushes to `main`
@@ -61,7 +61,7 @@ Behavior:
 - npm package settings -> Trusted Publishers -> Add Publisher
 - Provider: GitHub Actions
 - Repository: `yashgupta18/devtracekit`
-- Workflow file: `.github/workflows/publish-npm.yml`
+- Workflow file: `.github/workflows/publish.yml`
 - Environment name: `npm-publish`
 - Allowed actions: select `allow npm publish`
 - Optional: select `allow npm stage publish` only if you plan staged releases
@@ -98,7 +98,7 @@ Behavior:
 - `E404` on package publish from Actions:
   - Confirm Trusted Publisher is configured on the package `devtracekit` (not only account-level)
   - Confirm repository is exactly `yashgupta18/devtracekit` after repo rename
-  - Confirm workflow file is exactly `.github/workflows/publish-npm.yml`
+  - Confirm workflow file is exactly `.github/workflows/publish.yml`
   - Confirm environment name is exactly `npm-publish`
   - Remove and re-add the Trusted Publisher entry after repo rename
   - Re-run workflow and compare debug step values with npm Trusted Publisher fields

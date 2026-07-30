@@ -9,6 +9,7 @@
   "scripts": {
     "devscope:start": "node ./src/cli.js start",
     "example": "node ./examples/local-debug-app.js",
+    "example:mini": "node ./examples/mini-e2e-app.js",
     "test": "node --test"
   },
   "files": [

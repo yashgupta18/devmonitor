@@ -58,8 +58,8 @@ Status legend:
 - [x] Add onboarding docs for production connectors and security hardening.
 
 ### Phase 6 - Enterprise Operations and Intelligence (Future)
-- [ ] Multi-cluster and multi-region federation view.
-- [ ] GitOps integration for change-event correlation.
-- [ ] Deployment risk scoring and canary regression detection.
-- [ ] Cost observability and capacity insights by service/team.
-- [ ] Incident postmortem export and timeline replay.
+- [x] Multi-cluster and multi-region federation view.
+- [x] GitOps integration for change-event correlation.
+- [x] Deployment risk scoring and canary regression detection.
+- [x] Cost observability and capacity insights by service/team.
+- [x] Incident postmortem export and timeline replay.

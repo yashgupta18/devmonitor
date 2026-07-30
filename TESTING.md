@@ -34,6 +34,15 @@ npm test
 npm run devscope:start -- --example
 ```
 
+Optional: run the mini end-to-end scenario app:
+
+```bash
+npm run example:mini
+curl -X POST http://localhost:3050/scenario/full
+```
+
+Detailed walkthrough: `MINI_EXAMPLE_APP.md`.
+
 If port `4318` is already in use, run DevScope on alternate ports:
 
 ```bash
@@ -97,6 +106,11 @@ python ./examples/python-otel-example.py
 28. Audit endpoint returns allowed/denied security events.
 29. Alert hooks send incident-context notifications through configured channels.
 30. Cluster heartbeat/status endpoints expose active HA instance inventory.
+31. Federation endpoint summarizes multi-cluster and multi-region traces.
+32. GitOps change events can be ingested and correlated with post-deploy trace impact.
+33. Deployment risk endpoint scores rollout risk and canary regressions against baseline windows.
+34. Cost-capacity endpoint returns per-service cost estimates and saturation risk.
+35. Incident postmortem export endpoint returns markdown timeline summary and replay frames.
 
 ## Quick Verification Checklist
 - [ ] Dashboard loads successfully.
@@ -123,6 +137,11 @@ python ./examples/python-otel-example.py
 - [ ] Audit endpoint responds for admin key: `GET /api/audit`.
 - [ ] Alert test endpoint responds for admin key: `POST /api/alerts/test`.
 - [ ] Cluster endpoints respond: `POST /api/cluster/heartbeat`, `GET /api/cluster/status`.
+- [ ] Federation endpoint responds: `GET /api/federation`.
+- [ ] GitOps ingest/correlation endpoints respond: `POST /api/gitops/events`, `GET /api/gitops/correlations`.
+- [ ] Deployment risk endpoint responds: `GET /api/deployments/risk`.
+- [ ] Cost/capacity endpoint responds: `GET /api/cost-capacity`.
+- [ ] Postmortem/replay endpoints respond: `GET /api/incidents/postmortem`, `GET /api/incidents/replay`.
 
 ## Current Limitations
 1. SQL/Redis/Kafka/Job events are simulated in the example app, not real drivers yet.
@@ -212,3 +231,14 @@ File: `tests/dashboard-phase5-production.test.js`
 File: `tests/storage-timeseries.test.js`
 1. file-backed trace store persistence across core restarts,
 2. time-series capture and SLO report generation.
+
+File: `tests/dashboard-federation.test.js`
+1. federation endpoint summarizes cluster/region inventory and cross-cluster links from span metadata.
+
+File: `tests/dashboard-gitops.test.js`
+1. gitops change event ingest/list and trace-impact correlation with risk classification.
+
+File: `tests/dashboard-phase6-advanced.test.js`
+1. deployment risk endpoint returns canary/baseline risk structure,
+2. cost-capacity endpoint returns service estimates,
+3. incident postmortem and replay endpoints return exportable timeline data.

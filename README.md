@@ -59,6 +59,17 @@ curl "http://localhost:3000/load?requests=10"
 curl http://localhost:3000/otel-checkout
 ```
 
+## Mini End-to-End Example App
+
+Run a compact scenario app that exercises federation, GitOps, canary risk, cost/capacity, and postmortem/replay in one flow:
+
+```bash
+npm run example:mini
+curl -X POST http://localhost:3050/scenario/full
+```
+
+See full setup and verification steps in `MINI_EXAMPLE_APP.md`.
+
 ## If Port 4318 Is Busy
 
 Run on alternate ports:
@@ -100,6 +111,11 @@ python ./examples/python-otel-example.py
 - Cross-service incident correlation from trace/span relationships
 - SLO burn-rate panel (`GET /api/slo`)
 - Time-series bucket query (`GET /api/timeseries`)
+- Federation panel for multi-cluster/multi-region traces (`GET /api/federation`)
+- GitOps change-event correlation panel (`POST /api/gitops/events`, `GET /api/gitops/correlations`)
+- Deployment risk scoring and canary regression panel (`GET /api/deployments/risk`)
+- Cost observability and capacity insights panel (`GET /api/cost-capacity`)
+- Incident postmortem export and timeline replay (`GET /api/incidents/postmortem`, `GET /api/incidents/replay`)
 - RBAC/authn with API keys plus audit logs (`GET /api/audit`)
 - Alert hooks for Slack/PagerDuty/webhooks (`POST /api/alerts/test`)
 - HA cluster heartbeat/status (`POST /api/cluster/heartbeat`, `GET /api/cluster/status`)
@@ -117,6 +133,14 @@ python ./examples/python-otel-example.py
 - `GET /api/services`
 - `GET /api/graph`
 - `GET /api/insights`
+- `GET /api/federation`
+- `POST /api/gitops/events`
+- `GET /api/gitops/events`
+- `GET /api/gitops/correlations`
+- `GET /api/deployments/risk`
+- `GET /api/cost-capacity`
+- `GET /api/incidents/postmortem`
+- `GET /api/incidents/replay`
 - `GET /api/timeseries`
 - `GET /api/slo`
 - `GET /api/audit` (admin)
@@ -334,3 +358,4 @@ Current packaging note:
 - Task tracker: `TASKS.md`
 - Test/validation guide: `TESTING.md`
 - Production architecture: `PRODUCTION_ARCHITECTURE.md`
+- Mini E2E example app guide: `MINI_EXAMPLE_APP.md`

@@ -16,6 +16,7 @@ export class DevScopeCore {
     this.maxEventNameLength = options.maxEventNameLength ?? 512;
     this.maxMetadataEntries = options.maxMetadataEntries ?? 20;
     this.maxMetadataValueLength = options.maxMetadataValueLength ?? 256;
+    this.maxGitOpsEvents = options.maxGitOpsEvents ?? 500;
     this.defaultTenantId = this.normalizeScopeValue(
       options.defaultTenantId,
       "default-tenant",
@@ -36,6 +37,7 @@ export class DevScopeCore {
     this.timeSeriesStore = new TimeSeriesStore({
       retentionMinutes: options.timeSeriesRetentionMinutes ?? 1440,
     });
+    this.gitOpsEvents = [];
   }
 
   createTrace({
@@ -780,6 +782,772 @@ export class DevScopeCore {
     };
   }
 
+  buildFederationView(options = {}) {
+    const limit = Number(options.limit ?? 600);
+    const boundedLimit = Number.isFinite(limit) ? Math.max(1, limit) : 600;
+    const traces = this.listTraces({
+      limit: boundedLimit,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+      service: options.service,
+      cluster: options.cluster,
+      namespace: options.namespace,
+    });
+
+    const clusterMap = new Map();
+    const linkMap = new Map();
+
+    for (const trace of traces) {
+      const federation = this.extractFederationTargetsFromTrace(trace);
+      const targets = this.normalizeFederationTargets(federation.targets);
+      this.updateFederationClusterMap(clusterMap, trace, targets);
+      this.updateFederationLinkMap(linkMap, trace, federation.uniqueClusters);
+    }
+
+    const clusters = this.formatFederationClusters(clusterMap);
+    const regions = this.buildFederationRegions(clusters);
+
+    const links = Array.from(linkMap.values()).sort(
+      (a, b) => b.traceCount - a.traceCount,
+    );
+
+    return {
+      generatedAtMs: nowMs(),
+      analyzedTraces: traces.length,
+      clusterCount: clusters.length,
+      regionCount: regions.length,
+      clusters,
+      regions,
+      links,
+    };
+  }
+
+  recordGitOpsEvent(change = {}) {
+    const event = {
+      id: String(change.id ?? generateId()),
+      source: String(change.source ?? "gitops"),
+      environment: this.normalizeScopeValue(change.environment, "unknown"),
+      projectId: this.normalizeScopeValue(change.projectId, "unknown"),
+      tenantId: this.normalizeScopeValue(change.tenantId, "unknown"),
+      service: String(change.service ?? "unknown-service"),
+      commitSha: String(change.commitSha ?? "unknown").slice(0, 64),
+      author: String(change.author ?? "unknown").slice(0, 120),
+      action: String(change.action ?? "deploy").slice(0, 80),
+      status: String(change.status ?? "completed").slice(0, 80),
+      timestampMs: Number.isFinite(change.timestampMs)
+        ? change.timestampMs
+        : nowMs(),
+      metadata: this.sanitizeMetadata(change.metadata ?? {}),
+    };
+
+    this.gitOpsEvents.push(event);
+    if (this.gitOpsEvents.length > this.maxGitOpsEvents) {
+      this.gitOpsEvents.shift();
+    }
+
+    return event;
+  }
+
+  listGitOpsEvents(options = {}) {
+    const limit = Number.isFinite(options.limit)
+      ? Math.max(1, Math.min(options.limit, this.maxGitOpsEvents))
+      : 100;
+
+    return this.gitOpsEvents
+      .filter((event) => {
+        if (options.tenantId && event.tenantId !== options.tenantId) {
+          return false;
+        }
+        if (options.projectId && event.projectId !== options.projectId) {
+          return false;
+        }
+        if (options.environment && event.environment !== options.environment) {
+          return false;
+        }
+        if (options.service && event.service !== options.service) {
+          return false;
+        }
+        return true;
+      })
+      .slice(-limit)
+      .map((event) => ({ ...event }))
+      .reverse();
+  }
+
+  correlateGitOpsChanges(options = {}) {
+    const windowMinutes = Math.max(1, Number(options.windowMinutes ?? 30));
+    const windowMs = windowMinutes * 60_000;
+    const events = this.listGitOpsEvents({
+      limit: Number(options.limit ?? 50),
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+      service: options.service,
+    });
+
+    const traces = this.listTraces({
+      limit: this.maxTraces,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    });
+
+    const correlations = events.map((event) => {
+      const impacted = traces.filter((trace) => {
+        const traceTs = trace.endTimeMs ?? trace.startTimeMs;
+        if (
+          traceTs < event.timestampMs ||
+          traceTs > event.timestampMs + windowMs
+        ) {
+          return false;
+        }
+        if (
+          event.environment !== "unknown" &&
+          trace.environment !== event.environment
+        ) {
+          return false;
+        }
+        if (
+          event.service !== "unknown-service" &&
+          trace.service !== event.service
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      const failedCount = impacted.filter(
+        (trace) => (trace.statusCode ?? 0) >= 500 || trace.error,
+      ).length;
+      const avgLatencyMs =
+        impacted.length > 0
+          ? Math.round(
+              impacted.reduce(
+                (sum, trace) => sum + (trace.durationMs ?? 0),
+                0,
+              ) / impacted.length,
+            )
+          : 0;
+      const errorRate = impacted.length > 0 ? failedCount / impacted.length : 0;
+      const risk = this.determineGitOpsRisk({
+        traceCount: impacted.length,
+        errorRate,
+        avgLatencyMs,
+      });
+
+      return {
+        event,
+        impact: {
+          traceCount: impacted.length,
+          failedCount,
+          errorRate,
+          avgLatencyMs,
+          sampleTraceIds: impacted.slice(0, 5).map((trace) => trace.traceId),
+        },
+        risk,
+      };
+    });
+
+    const highRiskCount = correlations.filter(
+      (item) => item.risk === "high",
+    ).length;
+
+    return {
+      generatedAtMs: nowMs(),
+      windowMinutes,
+      analyzedEvents: correlations.length,
+      highRiskCount,
+      correlations,
+    };
+  }
+
+  buildDeploymentRiskReport(options = {}) {
+    const baselineMinutes = Math.max(1, Number(options.baselineMinutes ?? 30));
+    const canaryMinutes = Math.max(1, Number(options.canaryMinutes ?? 20));
+    const minCanarySamples = Math.max(1, Number(options.minCanarySamples ?? 5));
+    const errorRateDeltaThreshold = Number(
+      options.errorRateDeltaThreshold ?? 0.05,
+    );
+    const latencyMultiplierThreshold = Number(
+      options.latencyMultiplierThreshold ?? 1.3,
+    );
+
+    const events = this.listGitOpsEvents({
+      limit: Number(options.limit ?? 30),
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+      service: options.service,
+    });
+
+    const traces = this.listTraces({
+      limit: this.maxTraces,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    });
+
+    const deployments = events.map((event) => {
+      const baselineStart = event.timestampMs - baselineMinutes * 60_000;
+      const baselineEnd = event.timestampMs;
+      const canaryEnd = event.timestampMs + canaryMinutes * 60_000;
+
+      const baselineTraces = this.selectTracesForWindow(traces, {
+        service: event.service,
+        startMs: baselineStart,
+        endMs: baselineEnd,
+      });
+      const canaryTraces = this.selectTracesForWindow(traces, {
+        service: event.service,
+        startMs: event.timestampMs,
+        endMs: canaryEnd,
+      });
+
+      const baseline = this.summarizeTraceWindow(baselineTraces);
+      const canary = this.summarizeTraceWindow(canaryTraces);
+
+      const regressionReasons = [];
+      if (canary.requests < minCanarySamples) {
+        regressionReasons.push("insufficient_canary_samples");
+      }
+
+      const errorRateDelta = canary.errorRate - baseline.errorRate;
+      if (errorRateDelta >= errorRateDeltaThreshold) {
+        regressionReasons.push("error_rate_increase");
+      }
+
+      const hasBaselineLatency = baseline.p95Ms > 0;
+      if (
+        hasBaselineLatency &&
+        canary.p95Ms >= baseline.p95Ms * latencyMultiplierThreshold
+      ) {
+        regressionReasons.push("p95_latency_regression");
+      }
+
+      const status = this.resolveCanaryStatus({
+        canaryRequests: canary.requests,
+        minCanarySamples,
+        regressionReasons,
+      });
+      const riskScore = this.calculateDeploymentRiskScore({
+        baseline,
+        canary,
+        regressionReasons,
+      });
+
+      return {
+        event,
+        baseline,
+        canary,
+        errorRateDelta,
+        latencyDeltaMs: canary.p95Ms - baseline.p95Ms,
+        regressionReasons,
+        canaryStatus: status,
+        riskScore,
+        riskLevel: this.riskScoreToLevel(riskScore),
+      };
+    });
+
+    return {
+      generatedAtMs: nowMs(),
+      analyzedDeployments: deployments.length,
+      baselineMinutes,
+      canaryMinutes,
+      deployments,
+    };
+  }
+
+  buildCostCapacityInsights(options = {}) {
+    const windowMinutes = Math.max(1, Number(options.windowMinutes ?? 60));
+    const cutoff = nowMs() - windowMinutes * 60_000;
+    const targetRps = Math.max(0.1, Number(options.targetRps ?? 100));
+    const cpuCostPerCoreHour = Number(options.cpuCostPerCoreHour ?? 0.032);
+    const memoryCostPerGbHour = Number(options.memoryCostPerGbHour ?? 0.004);
+    const requestCostPer1k = Number(options.requestCostPer1k ?? 0.001);
+
+    const traces = this.listTraces({
+      limit: this.maxTraces,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    }).filter((trace) => (trace.endTimeMs ?? trace.startTimeMs) >= cutoff);
+
+    const groupMap = new Map();
+    for (const trace of traces) {
+      const key = `${trace.tenantId}:${trace.projectId}:${trace.environment}:${trace.service}`;
+      const current = groupMap.get(key) ?? {
+        tenantId: trace.tenantId,
+        projectId: trace.projectId,
+        environment: trace.environment,
+        service: trace.service ?? "unknown-service",
+        requests: 0,
+        errors: 0,
+        durations: [],
+        totalDurationMs: 0,
+        eventCount: 0,
+      };
+
+      current.requests += 1;
+      if ((trace.statusCode ?? 0) >= 500 || trace.error) {
+        current.errors += 1;
+      }
+      const duration = Number.isFinite(trace.durationMs) ? trace.durationMs : 0;
+      current.durations.push(duration);
+      current.totalDurationMs += duration;
+      current.eventCount += trace.events.length;
+
+      groupMap.set(key, current);
+    }
+
+    const services = Array.from(groupMap.values())
+      .map((group) => {
+        group.durations.sort((a, b) => a - b);
+        const avgLatencyMs =
+          group.requests > 0
+            ? Math.round(group.totalDurationMs / group.requests)
+            : 0;
+        const p95Ms = this.percentile(group.durations, 0.95);
+        const errorRate =
+          group.requests > 0 ? group.errors / group.requests : 0;
+        const observedRps = group.requests / (windowMinutes * 60);
+        const saturation = observedRps / targetRps;
+
+        const cpuCoreSeconds = (group.totalDurationMs / 1000) * 0.04;
+        const memoryGbHours = (group.requests * 0.015) / 3600;
+        const requestUnits = group.requests / 1000;
+        const estimatedCostUsd =
+          (cpuCoreSeconds / 3600) * cpuCostPerCoreHour +
+          memoryGbHours * memoryCostPerGbHour +
+          requestUnits * requestCostPer1k;
+
+        const capacityRisk = this.resolveCapacityRisk({ saturation, p95Ms });
+
+        return {
+          tenantId: group.tenantId,
+          projectId: group.projectId,
+          environment: group.environment,
+          service: group.service,
+          requests: group.requests,
+          errors: group.errors,
+          errorRate,
+          avgLatencyMs,
+          p95Ms: Math.round(p95Ms),
+          observedRps: Math.round(observedRps * 1000) / 1000,
+          targetRps,
+          saturation: Math.round(saturation * 1000) / 1000,
+          eventCount: group.eventCount,
+          estimatedCostUsd: Math.round(estimatedCostUsd * 10000) / 10000,
+          capacityRisk,
+        };
+      })
+      .sort((a, b) => b.estimatedCostUsd - a.estimatedCostUsd);
+
+    const totalEstimatedCostUsd = services.reduce(
+      (sum, service) => sum + service.estimatedCostUsd,
+      0,
+    );
+    const highRiskServices = services.filter(
+      (service) =>
+        service.capacityRisk === "high" || service.capacityRisk === "critical",
+    ).length;
+
+    return {
+      generatedAtMs: nowMs(),
+      windowMinutes,
+      serviceCount: services.length,
+      highRiskServices,
+      totalEstimatedCostUsd: Math.round(totalEstimatedCostUsd * 10000) / 10000,
+      services,
+    };
+  }
+
+  buildIncidentPostmortem(options = {}) {
+    const incident =
+      String(options.incident ?? "incident").trim() || "incident";
+    const report = this.buildIncidentCorrelations({
+      incident,
+      limit: Number(options.limit ?? 500),
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    });
+
+    const traceIdSet = new Set(report.sampleCorrelatedTraceIds ?? []);
+    const traces = this.listTraces({
+      limit: Number(options.limit ?? 500),
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    }).filter((trace) => traceIdSet.has(trace.traceId));
+
+    const timeline = this.buildTimelineEntriesFromTraces(traces);
+    const markdown = this.renderPostmortemMarkdown({
+      incident,
+      report,
+      timeline,
+      traces,
+    });
+
+    return {
+      incident,
+      generatedAtMs: nowMs(),
+      summary: {
+        analyzedTraces: report.analyzedTraces,
+        candidateTraceCount: report.candidateTraceCount,
+        correlatedTraceCount: report.correlatedTraceCount,
+        impactedServiceCount: report.impactedServices.length,
+      },
+      impactedServices: report.impactedServices,
+      relationships: report.relationships,
+      traces: traces.map((trace) => ({
+        traceId: trace.traceId,
+        service: trace.service,
+        endpoint: `${trace.method} ${trace.path}`,
+        statusCode: trace.statusCode,
+        durationMs: trace.durationMs,
+        startTimeMs: trace.startTimeMs,
+        endTimeMs: trace.endTimeMs,
+      })),
+      timeline,
+      markdown,
+    };
+  }
+
+  buildIncidentReplay(options = {}) {
+    const postmortem = this.buildIncidentPostmortem(options);
+    const ordered = [...postmortem.timeline].sort(
+      (a, b) => a.timestampMs - b.timestampMs,
+    );
+    const startMs = ordered[0]?.timestampMs ?? nowMs();
+    const endMs = ordered.at(-1)?.timestampMs ?? startMs;
+
+    const frames = ordered.map((entry, index) => ({
+      index,
+      offsetMs: entry.timestampMs - startMs,
+      ...entry,
+    }));
+
+    return {
+      incident: postmortem.incident,
+      generatedAtMs: nowMs(),
+      frameCount: frames.length,
+      durationMs: Math.max(0, endMs - startMs),
+      frames,
+    };
+  }
+
+  determineGitOpsRisk({ traceCount, errorRate, avgLatencyMs }) {
+    if (traceCount === 0) {
+      return "unknown";
+    }
+
+    if (errorRate >= 0.2) {
+      return "high";
+    }
+
+    if (avgLatencyMs >= 800) {
+      return "medium";
+    }
+
+    return "low";
+  }
+
+  selectTracesForWindow(traces, options = {}) {
+    return traces.filter((trace) => {
+      if (options.service && trace.service !== options.service) {
+        return false;
+      }
+
+      const traceTs = trace.endTimeMs ?? trace.startTimeMs;
+      if (Number.isFinite(options.startMs) && traceTs < options.startMs) {
+        return false;
+      }
+      if (Number.isFinite(options.endMs) && traceTs >= options.endMs) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  summarizeTraceWindow(traces) {
+    const durations = traces
+      .map((trace) => trace.durationMs)
+      .filter((duration) => Number.isFinite(duration))
+      .sort((a, b) => a - b);
+    const failed = traces.filter(
+      (trace) => (trace.statusCode ?? 0) >= 500 || trace.error,
+    ).length;
+
+    const requests = traces.length;
+    const avgLatencyMs =
+      requests > 0
+        ? Math.round(
+            traces.reduce((sum, trace) => sum + (trace.durationMs ?? 0), 0) /
+              requests,
+          )
+        : 0;
+
+    return {
+      requests,
+      failed,
+      errorRate: requests > 0 ? failed / requests : 0,
+      avgLatencyMs,
+      p95Ms: Math.round(this.percentile(durations, 0.95)),
+    };
+  }
+
+  resolveCanaryStatus(options = {}) {
+    if (options.canaryRequests < options.minCanarySamples) {
+      return "insufficient_data";
+    }
+
+    if (options.regressionReasons.length > 0) {
+      return "regressed";
+    }
+
+    return "healthy";
+  }
+
+  calculateDeploymentRiskScore(options = {}) {
+    let score = 0;
+
+    if (options.regressionReasons.includes("insufficient_canary_samples")) {
+      score += 10;
+    }
+    if (options.regressionReasons.includes("error_rate_increase")) {
+      score += 55;
+    }
+    if (options.regressionReasons.includes("p95_latency_regression")) {
+      score += 35;
+    }
+
+    if (options.canary.requests >= 20 && options.canary.errorRate >= 0.3) {
+      score += 15;
+    }
+
+    if (options.canary.avgLatencyMs > options.baseline.avgLatencyMs + 400) {
+      score += 10;
+    }
+
+    return Math.min(100, score);
+  }
+
+  riskScoreToLevel(score) {
+    if (score >= 70) {
+      return "critical";
+    }
+    if (score >= 45) {
+      return "high";
+    }
+    if (score >= 20) {
+      return "medium";
+    }
+    return "low";
+  }
+
+  resolveCapacityRisk({ saturation, p95Ms }) {
+    if (saturation >= 1) {
+      return "critical";
+    }
+    if (saturation >= 0.8 || p95Ms >= 1000) {
+      return "high";
+    }
+    if (saturation >= 0.6 || p95Ms >= 600) {
+      return "medium";
+    }
+    return "low";
+  }
+
+  buildTimelineEntriesFromTraces(traces) {
+    const timeline = [];
+
+    for (const trace of traces) {
+      timeline.push({
+        timestampMs: trace.startTimeMs,
+        type: "trace_start",
+        traceId: trace.traceId,
+        service: trace.service,
+        message: `${trace.method} ${trace.path} started`,
+      });
+
+      for (const event of trace.events) {
+        timeline.push({
+          timestampMs: event.timestampMs,
+          type: `event:${event.type}`,
+          traceId: trace.traceId,
+          service: trace.service,
+          message: `${event.type} ${event.name} (${event.status})`,
+        });
+      }
+
+      timeline.push({
+        timestampMs: trace.endTimeMs ?? trace.startTimeMs,
+        type: "trace_end",
+        traceId: trace.traceId,
+        service: trace.service,
+        message: `${trace.method} ${trace.path} finished with ${trace.statusCode ?? "unknown"}`,
+      });
+    }
+
+    return timeline.sort((a, b) => a.timestampMs - b.timestampMs);
+  }
+
+  renderPostmortemMarkdown(options = {}) {
+    const topImpacted = (options.report.impactedServices ?? []).slice(0, 5);
+    const lines = [
+      `# Incident Postmortem: ${options.incident}`,
+      "",
+      `Generated: ${new Date(nowMs()).toISOString()}`,
+      `Candidate traces: ${options.report.candidateTraceCount}`,
+      `Correlated traces: ${options.report.correlatedTraceCount}`,
+      "",
+      "## Impacted Services",
+    ];
+
+    if (topImpacted.length === 0) {
+      lines.push("- none");
+    } else {
+      for (const service of topImpacted) {
+        lines.push(
+          `- ${service.service}: traces=${service.traceCount}, failures=${service.failedTraceCount}, avgLatencyMs=${service.avgDurationMs}`,
+        );
+      }
+    }
+
+    lines.push("", "## Timeline Replay (first 30 entries)");
+    const timelinePreview = options.timeline.slice(0, 30);
+    for (const entry of timelinePreview) {
+      lines.push(
+        `- ${new Date(entry.timestampMs).toISOString()} | ${entry.service} | ${entry.type} | ${entry.message}`,
+      );
+    }
+
+    return lines.join("\n");
+  }
+
+  normalizeFederationTargets(targets) {
+    if (targets.length > 0) {
+      return targets;
+    }
+
+    return [{ cluster: "unknown-cluster", region: "unknown-region" }];
+  }
+
+  updateFederationClusterMap(clusterMap, trace, targets) {
+    for (const target of targets) {
+      const key = `${target.cluster}::${target.region}`;
+      const current = clusterMap.get(key) ?? {
+        cluster: target.cluster,
+        region: target.region,
+        environments: new Set(),
+        services: new Set(),
+        traceCount: 0,
+        failedCount: 0,
+        totalDurationMs: 0,
+        sampleTraceId: trace.traceId,
+      };
+
+      current.environments.add(trace.environment);
+      current.services.add(trace.service ?? "unknown-service");
+      current.traceCount += 1;
+      if ((trace.statusCode ?? 0) >= 500 || trace.error) {
+        current.failedCount += 1;
+      }
+      current.totalDurationMs += trace.durationMs ?? 0;
+
+      clusterMap.set(key, current);
+    }
+  }
+
+  updateFederationLinkMap(linkMap, trace, uniqueClusters) {
+    if (uniqueClusters.length < 2) {
+      return;
+    }
+
+    for (let left = 0; left < uniqueClusters.length; left += 1) {
+      for (let right = left + 1; right < uniqueClusters.length; right += 1) {
+        const from = uniqueClusters[left];
+        const to = uniqueClusters[right];
+        const edgeKey = `${from}->${to}`;
+        const current = linkMap.get(edgeKey) ?? {
+          from,
+          to,
+          traceCount: 0,
+          failedCount: 0,
+          sampleTraceId: trace.traceId,
+        };
+
+        current.traceCount += 1;
+        if ((trace.statusCode ?? 0) >= 500 || trace.error) {
+          current.failedCount += 1;
+        }
+
+        linkMap.set(edgeKey, current);
+      }
+    }
+  }
+
+  formatFederationClusters(clusterMap) {
+    return Array.from(clusterMap.values())
+      .map((cluster) => ({
+        cluster: cluster.cluster,
+        region: cluster.region,
+        traceCount: cluster.traceCount,
+        failedCount: cluster.failedCount,
+        errorRate:
+          cluster.traceCount > 0 ? cluster.failedCount / cluster.traceCount : 0,
+        avgLatencyMs:
+          cluster.traceCount > 0
+            ? Math.round(cluster.totalDurationMs / cluster.traceCount)
+            : 0,
+        environments: Array.from(cluster.environments).sort((a, b) =>
+          String(a).localeCompare(String(b)),
+        ),
+        services: Array.from(cluster.services).sort((a, b) =>
+          String(a).localeCompare(String(b)),
+        ),
+        sampleTraceId: cluster.sampleTraceId,
+      }))
+      .sort((a, b) => b.traceCount - a.traceCount);
+  }
+
+  buildFederationRegions(clusters) {
+    const regionMap = new Map();
+
+    for (const cluster of clusters) {
+      const current = regionMap.get(cluster.region) ?? {
+        region: cluster.region,
+        traceCount: 0,
+        failedCount: 0,
+        clusters: new Set(),
+        services: new Set(),
+      };
+
+      current.traceCount += cluster.traceCount;
+      current.failedCount += cluster.failedCount;
+      current.clusters.add(cluster.cluster);
+      for (const service of cluster.services) {
+        current.services.add(service);
+      }
+
+      regionMap.set(cluster.region, current);
+    }
+
+    return Array.from(regionMap.values())
+      .map((region) => ({
+        region: region.region,
+        traceCount: region.traceCount,
+        failedCount: region.failedCount,
+        errorRate:
+          region.traceCount > 0 ? region.failedCount / region.traceCount : 0,
+        clusterCount: region.clusters.size,
+        serviceCount: region.services.size,
+      }))
+      .sort((a, b) => b.traceCount - a.traceCount);
+  }
+
   middleware(serviceName = "local-service", scopeOptions = {}) {
     return (req, res, next) => {
       const traceScope = this.resolveScope(scopeOptions);
@@ -1038,6 +1806,11 @@ export class DevScopeCore {
     const status = this.otelStatusToText(spanData.statusCode, spanData.status);
     const durationMs = this.computeDurationMs(spanData);
     const serviceMetadata = this.extractSpanServiceMetadata(spanData, options);
+    const federationMetadata = this.extractFederationMetadata(spanData);
+    const scopeMetadata = {
+      ...serviceMetadata,
+      ...federationMetadata,
+    };
 
     if (attributes["db.system"] === "redis") {
       return {
@@ -1047,7 +1820,7 @@ export class DevScopeCore {
         status,
         metadata: {
           key: attributes["db.redis.key"] ?? attributes["db.statement"] ?? "",
-          ...serviceMetadata,
+          ...scopeMetadata,
         },
       };
     }
@@ -1060,7 +1833,7 @@ export class DevScopeCore {
         status,
         metadata: {
           dbSystem: attributes["db.system"] ?? "unknown",
-          ...serviceMetadata,
+          ...scopeMetadata,
         },
       };
     }
@@ -1081,7 +1854,7 @@ export class DevScopeCore {
         metadata: {
           system: attributes["messaging.system"] ?? "unknown",
           topic: attributes["messaging.destination.name"] ?? "",
-          ...serviceMetadata,
+          ...scopeMetadata,
         },
       };
     }
@@ -1093,7 +1866,7 @@ export class DevScopeCore {
         durationMs,
         status,
         metadata: {
-          ...serviceMetadata,
+          ...scopeMetadata,
         },
       };
     }
@@ -1105,8 +1878,79 @@ export class DevScopeCore {
       status,
       metadata: {
         spanKind: spanData.kind ?? "internal",
-        ...serviceMetadata,
+        ...scopeMetadata,
       },
+    };
+  }
+
+  extractFederationMetadata(spanData) {
+    const attributes = spanData.attributes ?? {};
+
+    const clusterName =
+      attributes["k8s.cluster.name"] ??
+      attributes["k8s.cluster"] ??
+      attributes["aws.ecs.cluster.name"] ??
+      attributes["nomad.datacenter"] ??
+      attributes["cluster.name"];
+    const region =
+      attributes["cloud.region"] ??
+      attributes["aws.region"] ??
+      attributes["region"];
+    const zone =
+      attributes["cloud.availability_zone"] ?? attributes["availability.zone"];
+    const provider = attributes["cloud.provider"];
+
+    const metadata = {};
+    if (clusterName) {
+      metadata.cluster = String(clusterName);
+    }
+    if (region) {
+      metadata.region = String(region);
+    }
+    if (zone) {
+      metadata.zone = String(zone);
+    }
+    if (provider) {
+      metadata.cloudProvider = String(provider);
+    }
+
+    return metadata;
+  }
+
+  extractFederationTargetsFromTrace(trace) {
+    const targets = [];
+    const uniqueClusterSet = new Set();
+
+    for (const event of trace.events) {
+      const cluster =
+        event.metadata?.cluster ??
+        event.metadata?.clusterName ??
+        event.metadata?.clusterArn ??
+        event.metadata?.datacenter;
+      const region =
+        event.metadata?.region ??
+        event.metadata?.awsRegion ??
+        event.metadata?.cloudRegion ??
+        event.metadata?.zone;
+
+      if (!cluster && !region) {
+        continue;
+      }
+
+      const clusterValue = cluster ? String(cluster) : "unknown-cluster";
+      const regionValue = region ? String(region) : "unknown-region";
+      targets.push({
+        cluster: clusterValue,
+        region: regionValue,
+      });
+      uniqueClusterSet.add(`${clusterValue} (${regionValue})`);
+    }
+
+    return {
+      targets,
+      uniqueClusters: Array.from(uniqueClusterSet).sort((a, b) =>
+        a.localeCompare(b),
+      ),
     };
   }
 

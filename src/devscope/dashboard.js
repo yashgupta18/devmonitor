@@ -369,6 +369,196 @@ export function createDashboardServer(core, connectors = {}, options = {}) {
     res.json(core.buildAiInsights({ limit }));
   });
 
+  app.get("/api/federation", security.requirePermission("read"), (req, res) => {
+    const limit = Number(req.query.limit ?? 600);
+    const tenantId = getOptionalQueryString(req, "tenantId");
+    const projectId = getOptionalQueryString(req, "projectId");
+    const environment = getOptionalQueryString(req, "environment");
+    const service = getOptionalQueryString(req, "service");
+    const cluster = getOptionalQueryString(req, "cluster");
+    const namespace = getOptionalQueryString(req, "namespace");
+
+    res.json(
+      core.buildFederationView({
+        limit,
+        tenantId,
+        projectId,
+        environment,
+        service,
+        cluster,
+        namespace,
+      }),
+    );
+  });
+
+  app.post(
+    "/api/gitops/events",
+    security.requirePermission("write"),
+    (req, res) => {
+      const scope = resolveScopeFromRequest(req, req.body ?? {});
+      const event = core.recordGitOpsEvent({
+        id: req.body?.id,
+        source: req.body?.source,
+        tenantId: scope.tenantId,
+        projectId: scope.projectId,
+        environment: scope.environment,
+        service: req.body?.service,
+        commitSha: req.body?.commitSha,
+        author: req.body?.author,
+        action: req.body?.action,
+        status: req.body?.status,
+        timestampMs: req.body?.timestampMs,
+        metadata: req.body?.metadata,
+      });
+
+      res.status(202).json({
+        ok: true,
+        event,
+      });
+    },
+  );
+
+  app.get(
+    "/api/gitops/events",
+    security.requirePermission("read"),
+    (req, res) => {
+      const limit = Number(req.query.limit ?? 100);
+      const tenantId = getOptionalQueryString(req, "tenantId");
+      const projectId = getOptionalQueryString(req, "projectId");
+      const environment = getOptionalQueryString(req, "environment");
+      const service = getOptionalQueryString(req, "service");
+
+      res.json({
+        events: core.listGitOpsEvents({
+          limit,
+          tenantId,
+          projectId,
+          environment,
+          service,
+        }),
+      });
+    },
+  );
+
+  app.get(
+    "/api/gitops/correlations",
+    security.requirePermission("read"),
+    (req, res) => {
+      const limit = Number(req.query.limit ?? 50);
+      const windowMinutes = Number(req.query.windowMinutes ?? 30);
+      const tenantId = getOptionalQueryString(req, "tenantId");
+      const projectId = getOptionalQueryString(req, "projectId");
+      const environment = getOptionalQueryString(req, "environment");
+      const service = getOptionalQueryString(req, "service");
+
+      res.json(
+        core.correlateGitOpsChanges({
+          limit,
+          windowMinutes,
+          tenantId,
+          projectId,
+          environment,
+          service,
+        }),
+      );
+    },
+  );
+
+  app.get(
+    "/api/deployments/risk",
+    security.requirePermission("read"),
+    (req, res) => {
+      const limit = Number(req.query.limit ?? 30);
+      const baselineMinutes = Number(req.query.baselineMinutes ?? 30);
+      const canaryMinutes = Number(req.query.canaryMinutes ?? 20);
+      const minCanarySamples = Number(req.query.minCanarySamples ?? 5);
+
+      const tenantId = getOptionalQueryString(req, "tenantId");
+      const projectId = getOptionalQueryString(req, "projectId");
+      const environment = getOptionalQueryString(req, "environment");
+      const service = getOptionalQueryString(req, "service");
+
+      res.json(
+        core.buildDeploymentRiskReport({
+          limit,
+          baselineMinutes,
+          canaryMinutes,
+          minCanarySamples,
+          tenantId,
+          projectId,
+          environment,
+          service,
+        }),
+      );
+    },
+  );
+
+  app.get(
+    "/api/cost-capacity",
+    security.requirePermission("read"),
+    (req, res) => {
+      const windowMinutes = Number(req.query.windowMinutes ?? 60);
+      const targetRps = Number(req.query.targetRps ?? 100);
+      const tenantId = getOptionalQueryString(req, "tenantId");
+      const projectId = getOptionalQueryString(req, "projectId");
+      const environment = getOptionalQueryString(req, "environment");
+
+      res.json(
+        core.buildCostCapacityInsights({
+          windowMinutes,
+          targetRps,
+          tenantId,
+          projectId,
+          environment,
+        }),
+      );
+    },
+  );
+
+  app.get(
+    "/api/incidents/postmortem",
+    security.requirePermission("read"),
+    (req, res) => {
+      const incident = getOptionalQueryString(req, "incident") ?? "incident";
+      const limit = Number(req.query.limit ?? 500);
+      const tenantId = getOptionalQueryString(req, "tenantId");
+      const projectId = getOptionalQueryString(req, "projectId");
+      const environment = getOptionalQueryString(req, "environment");
+
+      res.json(
+        core.buildIncidentPostmortem({
+          incident,
+          limit,
+          tenantId,
+          projectId,
+          environment,
+        }),
+      );
+    },
+  );
+
+  app.get(
+    "/api/incidents/replay",
+    security.requirePermission("read"),
+    (req, res) => {
+      const incident = getOptionalQueryString(req, "incident") ?? "incident";
+      const limit = Number(req.query.limit ?? 500);
+      const tenantId = getOptionalQueryString(req, "tenantId");
+      const projectId = getOptionalQueryString(req, "projectId");
+      const environment = getOptionalQueryString(req, "environment");
+
+      res.json(
+        core.buildIncidentReplay({
+          incident,
+          limit,
+          tenantId,
+          projectId,
+          environment,
+        }),
+      );
+    },
+  );
+
   app.get("/api/timeseries", security.requirePermission("read"), (req, res) => {
     const windowMinutes = Number(req.query.windowMinutes ?? 60);
     const tenantId = getOptionalQueryString(req, "tenantId");

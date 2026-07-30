@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { createTraceStorage, TimeSeriesStore } from "./storage.js";
 
 function nowMs() {
   return Date.now();
@@ -15,22 +16,48 @@ export class DevScopeCore {
     this.maxEventNameLength = options.maxEventNameLength ?? 512;
     this.maxMetadataEntries = options.maxMetadataEntries ?? 20;
     this.maxMetadataValueLength = options.maxMetadataValueLength ?? 256;
-    this.traces = [];
-    this.traceIndex = new Map();
+    this.defaultTenantId = this.normalizeScopeValue(
+      options.defaultTenantId,
+      "default-tenant",
+    );
+    this.defaultProjectId = this.normalizeScopeValue(
+      options.defaultProjectId,
+      "default-project",
+    );
+    this.defaultEnvironment = this.normalizeScopeValue(
+      options.defaultEnvironment,
+      "local",
+    );
+    this.traceStore = createTraceStorage({
+      storageBackend: options.storageBackend,
+      traceStorePath: options.traceStorePath,
+      maxTraces: this.maxTraces,
+    });
+    this.timeSeriesStore = new TimeSeriesStore({
+      retentionMinutes: options.timeSeriesRetentionMinutes ?? 1440,
+    });
   }
 
   createTrace({
     method,
     path,
     service = "local-service",
+    tenantId,
+    projectId,
+    environment,
     traceId = generateId(),
     spanId = generateId(),
     startTimeMs = nowMs(),
   }) {
+    const scope = this.resolveScope({ tenantId, projectId, environment });
+
     const trace = {
       traceId,
       spanId,
       service,
+      tenantId: scope.tenantId,
+      projectId: scope.projectId,
+      environment: scope.environment,
       method,
       path,
       statusCode: null,
@@ -41,25 +68,28 @@ export class DevScopeCore {
       events: [],
     };
 
-    this.traces.push(trace);
-    this.traceIndex.set(traceId, trace);
+    this.traceStore.add(trace);
     this.enforceRetention();
     return trace;
   }
 
   finishTrace(traceId, { statusCode, error = null, endTimeMs }) {
-    const trace = this.traceIndex.get(traceId);
+    const trace = this.traceStore.get(traceId);
     if (!trace) {
       return;
     }
+    const wasCompleted = trace.endTimeMs !== null;
     trace.statusCode = statusCode;
     trace.error = error;
     trace.endTimeMs = Number.isFinite(endTimeMs) ? endTimeMs : nowMs();
     trace.durationMs = trace.endTimeMs - trace.startTimeMs;
+    if (!wasCompleted) {
+      this.timeSeriesStore.recordTrace(trace);
+    }
   }
 
   addEvent(traceId, event) {
-    const trace = this.traceIndex.get(traceId);
+    const trace = this.traceStore.get(traceId);
     if (!trace) {
       return;
     }
@@ -85,6 +115,12 @@ export class DevScopeCore {
     let endpoint;
     let status;
     let method;
+    let service;
+    let cluster;
+    let namespace;
+    let tenantId;
+    let projectId;
+    let environment;
 
     if (typeof options === "number") {
       limit = options;
@@ -93,13 +129,19 @@ export class DevScopeCore {
       endpoint = options.endpoint;
       status = options.status;
       method = options.method;
+      service = options.service;
+      cluster = options.cluster;
+      namespace = options.namespace;
+      tenantId = options.tenantId;
+      projectId = options.projectId;
+      environment = options.environment;
     }
 
     const boundedLimit = Number.isFinite(limit)
       ? Math.max(1, Math.min(limit, this.maxTraces))
       : 200;
 
-    const filtered = this.traces.filter((trace) => {
+    const filtered = this.traceStore.values().filter((trace) => {
       if (
         endpoint &&
         !trace.path.toLowerCase().includes(endpoint.toLowerCase())
@@ -112,6 +154,31 @@ export class DevScopeCore {
       if (method && trace.method.toLowerCase() !== method.toLowerCase()) {
         return false;
       }
+      if (!this.traceMatchesServiceFilter(trace, service)) {
+        return false;
+      }
+      if (
+        !this.traceMatchesMetadataFilter(trace, cluster, [
+          "cluster",
+          "clusterName",
+          "clusterArn",
+          "datacenter",
+        ])
+      ) {
+        return false;
+      }
+      if (!this.traceMatchesMetadataFilter(trace, namespace, ["namespace"])) {
+        return false;
+      }
+      if (tenantId && trace.tenantId !== tenantId) {
+        return false;
+      }
+      if (projectId && trace.projectId !== projectId) {
+        return false;
+      }
+      if (environment && trace.environment !== environment) {
+        return false;
+      }
       return true;
     });
 
@@ -121,27 +188,213 @@ export class DevScopeCore {
       .reverse();
   }
 
+  traceMatchesServiceFilter(trace, service) {
+    if (!service) {
+      return true;
+    }
+
+    const query = String(service).toLowerCase();
+    if (
+      String(trace.service ?? "")
+        .toLowerCase()
+        .includes(query)
+    ) {
+      return true;
+    }
+
+    for (const event of trace.events) {
+      const sourceService = String(
+        event.metadata?.sourceService ?? "",
+      ).toLowerCase();
+      const peerService = String(
+        event.metadata?.peerService ?? "",
+      ).toLowerCase();
+
+      if (sourceService.includes(query) || peerService.includes(query)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  traceMatchesMetadataFilter(trace, value, metadataKeys) {
+    if (!value) {
+      return true;
+    }
+
+    const query = String(value).toLowerCase();
+    for (const event of trace.events) {
+      for (const key of metadataKeys) {
+        const candidate = String(event.metadata?.[key] ?? "").toLowerCase();
+        if (candidate.includes(query)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   getTrace(traceId) {
-    const trace = this.traceIndex.get(traceId);
+    const trace = this.traceStore.get(traceId);
     return trace ? { ...trace } : null;
   }
 
-  stats() {
-    const total = this.traces.length;
-    const failed = this.traces.filter(
+  listTimeSeries(options = {}) {
+    return this.timeSeriesStore.listBuckets(options);
+  }
+
+  stats(options = {}) {
+    const traces = this.listTraces({
+      ...options,
+      limit: this.maxTraces,
+    });
+
+    const total = traces.length;
+    const failed = traces.filter(
       (trace) => (trace.statusCode ?? 0) >= 500,
     ).length;
     const avgLatency =
       total === 0
         ? 0
         : Math.round(
-            this.traces.reduce(
-              (sum, trace) => sum + (trace.durationMs ?? 0),
-              0,
-            ) / total,
+            traces.reduce((sum, trace) => sum + (trace.durationMs ?? 0), 0) /
+              total,
           );
 
     return { total, failed, avgLatency };
+  }
+
+  listTenants(options = {}) {
+    const traces = this.listTraces({
+      limit: this.maxTraces,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    });
+    const tenantMap = new Map();
+
+    for (const trace of traces) {
+      const tenantEntry = tenantMap.get(trace.tenantId) ?? {
+        tenantId: trace.tenantId,
+        projects: new Map(),
+        traceCount: 0,
+      };
+
+      tenantEntry.traceCount += 1;
+      const projectEntry = tenantEntry.projects.get(trace.projectId) ?? {
+        projectId: trace.projectId,
+        environments: new Set(),
+        services: new Set(),
+        traceCount: 0,
+      };
+
+      projectEntry.traceCount += 1;
+      projectEntry.environments.add(trace.environment);
+      projectEntry.services.add(trace.service);
+
+      tenantEntry.projects.set(trace.projectId, projectEntry);
+      tenantMap.set(trace.tenantId, tenantEntry);
+    }
+
+    return Array.from(tenantMap.values())
+      .map((tenant) => ({
+        tenantId: tenant.tenantId,
+        traceCount: tenant.traceCount,
+        projects: Array.from(tenant.projects.values())
+          .map((project) => ({
+            projectId: project.projectId,
+            traceCount: project.traceCount,
+            environments: Array.from(project.environments).sort(),
+            services: Array.from(project.services).sort(),
+          }))
+          .sort((a, b) => a.projectId.localeCompare(b.projectId)),
+      }))
+      .sort((a, b) => a.tenantId.localeCompare(b.tenantId));
+  }
+
+  listServices(options = {}) {
+    const traces = this.listTraces({
+      limit: this.maxTraces,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    });
+    const serviceMap = new Map();
+
+    for (const trace of traces) {
+      const serviceId = trace.service ?? "unknown-service";
+      const key = `${trace.tenantId}:${trace.projectId}:${trace.environment}:${serviceId}`;
+      const current = serviceMap.get(key) ?? {
+        serviceId,
+        tenantId: trace.tenantId,
+        projectId: trace.projectId,
+        environment: trace.environment,
+        traceCount: 0,
+        errorCount: 0,
+        totalLatencyMs: 0,
+        firstSeenMs: trace.startTimeMs,
+        lastSeenMs: trace.startTimeMs,
+        dependencies: new Set(),
+      };
+
+      current.traceCount += 1;
+      if ((trace.statusCode ?? 0) >= 500) {
+        current.errorCount += 1;
+      }
+      current.totalLatencyMs += trace.durationMs ?? 0;
+      current.firstSeenMs = Math.min(current.firstSeenMs, trace.startTimeMs);
+      current.lastSeenMs = Math.max(current.lastSeenMs, trace.startTimeMs);
+
+      for (const event of trace.events) {
+        current.dependencies.add(this.eventToDependencyName(event));
+      }
+
+      serviceMap.set(key, current);
+    }
+
+    const services = Array.from(serviceMap.values()).map((service) => ({
+      serviceId: service.serviceId,
+      tenantId: service.tenantId,
+      projectId: service.projectId,
+      environment: service.environment,
+      traceCount: service.traceCount,
+      errorCount: service.errorCount,
+      errorRate:
+        service.traceCount > 0 ? service.errorCount / service.traceCount : 0,
+      avgLatencyMs:
+        service.traceCount > 0
+          ? Math.round(service.totalLatencyMs / service.traceCount)
+          : 0,
+      firstSeenMs: service.firstSeenMs,
+      lastSeenMs: service.lastSeenMs,
+      dependencies: Array.from(service.dependencies).sort(),
+    }));
+
+    const groupedByEnvironment = new Map();
+    for (const service of services) {
+      const envEntry = groupedByEnvironment.get(service.environment) ?? {
+        environment: service.environment,
+        services: [],
+      };
+      envEntry.services.push(service);
+      groupedByEnvironment.set(service.environment, envEntry);
+    }
+
+    return {
+      totalServices: services.length,
+      environments: Array.from(groupedByEnvironment.values())
+        .map((entry) => ({
+          environment: entry.environment,
+          serviceCount: entry.services.length,
+          services: entry.services.sort((a, b) =>
+            a.serviceId.localeCompare(b.serviceId),
+          ),
+        }))
+        .sort((a, b) => a.environment.localeCompare(b.environment)),
+      services: services.sort((a, b) => a.serviceId.localeCompare(b.serviceId)),
+    };
   }
 
   buildServiceGraph(options = {}) {
@@ -279,12 +532,264 @@ export class DevScopeCore {
     };
   }
 
-  middleware(serviceName = "local-service") {
+  buildIncidentCorrelations(options = {}) {
+    const limit = Number(options.limit ?? 400);
+    const boundedLimit = Number.isFinite(limit) ? Math.max(1, limit) : 400;
+    const incident = String(options.incident ?? "").trim();
+    const incidentQuery = incident.toLowerCase();
+
+    const traces = this.listTraces({
+      limit: boundedLimit,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+    });
+
+    const durations = traces
+      .map((trace) => trace.durationMs)
+      .filter((value) => Number.isFinite(value))
+      .sort((a, b) => a - b);
+    const p95 = this.percentile(durations, 0.95);
+    const slowThresholdMs = Math.max(200, Math.round(p95));
+
+    const candidateTraces = traces.filter((trace) => {
+      const hasFailure = (trace.statusCode ?? 0) >= 500 || Boolean(trace.error);
+      const hasLatencySpike =
+        Number.isFinite(trace.durationMs) &&
+        trace.durationMs >= slowThresholdMs;
+
+      if (!incidentQuery) {
+        return hasFailure || hasLatencySpike;
+      }
+
+      return (
+        hasFailure ||
+        hasLatencySpike ||
+        this.traceMatchesIncidentQuery(trace, incidentQuery)
+      );
+    });
+
+    const relationshipMap = new Map();
+    const serviceSummaryMap = new Map();
+    const correlatedTraceIds = [];
+
+    for (const trace of candidateTraces) {
+      const services = this.extractServicesFromTrace(trace);
+      const orderedServices = Array.from(services).sort();
+      if (orderedServices.length >= 2) {
+        correlatedTraceIds.push(trace.traceId);
+      }
+
+      for (const serviceName of orderedServices) {
+        const current = serviceSummaryMap.get(serviceName) ?? {
+          service: serviceName,
+          traceCount: 0,
+          failedTraceCount: 0,
+          totalDurationMs: 0,
+          sampleTraceId: trace.traceId,
+        };
+
+        current.traceCount += 1;
+        current.totalDurationMs += trace.durationMs ?? 0;
+        if ((trace.statusCode ?? 0) >= 500 || trace.error) {
+          current.failedTraceCount += 1;
+        }
+
+        serviceSummaryMap.set(serviceName, current);
+      }
+
+      for (let left = 0; left < orderedServices.length; left += 1) {
+        for (let right = left + 1; right < orderedServices.length; right += 1) {
+          const from = orderedServices[left];
+          const to = orderedServices[right];
+          const key = `${from}->${to}`;
+          const current = relationshipMap.get(key) ?? {
+            from,
+            to,
+            traceCount: 0,
+            failureCount: 0,
+            sampleTraceId: trace.traceId,
+          };
+
+          current.traceCount += 1;
+          if ((trace.statusCode ?? 0) >= 500 || trace.error) {
+            current.failureCount += 1;
+          }
+
+          relationshipMap.set(key, current);
+        }
+      }
+    }
+
+    const impactedServices = Array.from(serviceSummaryMap.values())
+      .map((item) => ({
+        service: item.service,
+        traceCount: item.traceCount,
+        failedTraceCount: item.failedTraceCount,
+        failureRate:
+          item.traceCount > 0 ? item.failedTraceCount / item.traceCount : 0,
+        avgDurationMs:
+          item.traceCount > 0
+            ? Math.round(item.totalDurationMs / item.traceCount)
+            : 0,
+        sampleTraceId: item.sampleTraceId,
+      }))
+      .sort((a, b) => {
+        if (b.failedTraceCount !== a.failedTraceCount) {
+          return b.failedTraceCount - a.failedTraceCount;
+        }
+        return b.traceCount - a.traceCount;
+      });
+
+    const relationships = Array.from(relationshipMap.values()).sort(
+      (a, b) => b.traceCount - a.traceCount,
+    );
+
+    return {
+      incident: incident || "incident",
+      generatedAtMs: nowMs(),
+      analyzedTraces: traces.length,
+      candidateTraceCount: candidateTraces.length,
+      correlatedTraceCount: correlatedTraceIds.length,
+      slowThresholdMs,
+      impactedServices,
+      relationships,
+      sampleCorrelatedTraceIds: correlatedTraceIds.slice(0, 10),
+    };
+  }
+
+  buildSloReport(options = {}) {
+    const windowMinutes = Math.max(1, Number(options.windowMinutes ?? 60));
+    const objectiveAvailability = Number(options.objectiveAvailability ?? 99.9);
+    const objectiveP95Ms = Math.max(1, Number(options.objectiveP95Ms ?? 400));
+    const shortWindowMinutes = Math.max(
+      1,
+      Number(options.shortWindowMinutes ?? 5),
+    );
+
+    const traces = this.listTraces({
+      limit: this.maxTraces,
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
+      service: options.service,
+    });
+
+    const now = nowMs();
+    const windowCutoff = now - windowMinutes * 60_000;
+    const shortCutoff = now - shortWindowMinutes * 60_000;
+    const longCutoff =
+      now - Math.max(windowMinutes, shortWindowMinutes * 12) * 60_000;
+
+    const scoped = traces.filter(
+      (trace) => (trace.endTimeMs ?? trace.startTimeMs) >= windowCutoff,
+    );
+    const serviceMap = new Map();
+
+    for (const trace of scoped) {
+      const service = trace.service ?? "unknown-service";
+      const current = serviceMap.get(service) ?? {
+        service,
+        total: 0,
+        errors: 0,
+        durations: [],
+        shortTotal: 0,
+        shortErrors: 0,
+        longTotal: 0,
+        longErrors: 0,
+      };
+
+      const statusFailed =
+        (trace.statusCode ?? 0) >= 500 || Boolean(trace.error);
+      current.total += 1;
+      if (statusFailed) {
+        current.errors += 1;
+      }
+      current.durations.push(
+        Number.isFinite(trace.durationMs) ? trace.durationMs : 0,
+      );
+
+      const traceTs = trace.endTimeMs ?? trace.startTimeMs;
+      if (traceTs >= shortCutoff) {
+        current.shortTotal += 1;
+        if (statusFailed) {
+          current.shortErrors += 1;
+        }
+      }
+      if (traceTs >= longCutoff) {
+        current.longTotal += 1;
+        if (statusFailed) {
+          current.longErrors += 1;
+        }
+      }
+
+      serviceMap.set(service, current);
+    }
+
+    const allowedErrorRate = Math.max(
+      0.000001,
+      1 - objectiveAvailability / 100,
+    );
+    const services = Array.from(serviceMap.values())
+      .map((item) => {
+        item.durations.sort((a, b) => a - b);
+        const availability =
+          item.total > 0
+            ? ((item.total - item.errors) / item.total) * 100
+            : 100;
+        const p95Ms = this.percentile(item.durations, 0.95);
+        const shortErrorRate =
+          item.shortTotal > 0 ? item.shortErrors / item.shortTotal : 0;
+        const longErrorRate =
+          item.longTotal > 0 ? item.longErrors / item.longTotal : 0;
+
+        return {
+          service: item.service,
+          requests: item.total,
+          errors: item.errors,
+          availability: Math.round(availability * 1000) / 1000,
+          p95Ms: Math.round(p95Ms),
+          objectiveAvailability,
+          objectiveP95Ms,
+          availabilityBreached: availability < objectiveAvailability,
+          latencyBreached: p95Ms > objectiveP95Ms,
+          shortBurnRate:
+            allowedErrorRate > 0
+              ? Math.round((shortErrorRate / allowedErrorRate) * 100) / 100
+              : 0,
+          longBurnRate:
+            allowedErrorRate > 0
+              ? Math.round((longErrorRate / allowedErrorRate) * 100) / 100
+              : 0,
+        };
+      })
+      .sort((a, b) => {
+        if (b.shortBurnRate !== a.shortBurnRate) {
+          return b.shortBurnRate - a.shortBurnRate;
+        }
+        return b.requests - a.requests;
+      });
+
+    return {
+      generatedAtMs: now,
+      windowMinutes,
+      shortWindowMinutes,
+      objectiveAvailability,
+      objectiveP95Ms,
+      services,
+    };
+  }
+
+  middleware(serviceName = "local-service", scopeOptions = {}) {
     return (req, res, next) => {
+      const traceScope = this.resolveScope(scopeOptions);
       const trace = this.createTrace({
         method: req.method,
         path: req.path,
         service: serviceName,
+        tenantId: traceScope.tenantId,
+        projectId: traceScope.projectId,
+        environment: traceScope.environment,
       });
 
       req.devscope = {
@@ -353,7 +858,7 @@ export class DevScopeCore {
   ingestOtelSpan(spanData, options = {}) {
     const traceId = this.ensureTraceForOtelSpan(spanData, options);
     this.enrichTraceFromOtelSpan(traceId, spanData);
-    const mappedEvent = this.mapOtelSpanToEvent(spanData);
+    const mappedEvent = this.mapOtelSpanToEvent(spanData, options);
     this.addEvent(traceId, mappedEvent);
 
     if (!spanData.parentSpanId) {
@@ -376,12 +881,7 @@ export class DevScopeCore {
   }
 
   enforceRetention() {
-    while (this.traces.length > this.maxTraces) {
-      const oldest = this.traces.shift();
-      if (oldest) {
-        this.traceIndex.delete(oldest.traceId);
-      }
-    }
+    this.traceStore.enforceRetention();
   }
 
   sanitizeEvent(event) {
@@ -423,6 +923,9 @@ export class DevScopeCore {
       case "job":
         return "Worker Queue";
       case "otel":
+        if (event.metadata?.peerService) {
+          return String(event.metadata.peerService);
+        }
         return "Service Call";
       default:
         return `Dependency:${event.type}`;
@@ -466,7 +969,7 @@ export class DevScopeCore {
 
   ensureTraceForOtelSpan(spanData, options = {}) {
     const traceId = spanData.traceId ?? generateId();
-    const existing = this.traceIndex.get(traceId);
+    const existing = this.traceStore.get(traceId);
     if (existing) {
       return traceId;
     }
@@ -489,6 +992,9 @@ export class DevScopeCore {
       method,
       path,
       service: options.serviceName ?? spanData.serviceName ?? "otel-service",
+      tenantId: options.tenantId,
+      projectId: options.projectId,
+      environment: options.environment,
       traceId,
       spanId: spanData.spanId ?? generateId(),
       startTimeMs: derivedStart,
@@ -498,7 +1004,7 @@ export class DevScopeCore {
   }
 
   enrichTraceFromOtelSpan(traceId, spanData) {
-    const trace = this.traceIndex.get(traceId);
+    const trace = this.traceStore.get(traceId);
     if (!trace) {
       return;
     }
@@ -526,11 +1032,12 @@ export class DevScopeCore {
     }
   }
 
-  mapOtelSpanToEvent(spanData) {
+  mapOtelSpanToEvent(spanData, options = {}) {
     const attributes = spanData.attributes ?? {};
     const spanName = spanData.name ?? "otel_span";
     const status = this.otelStatusToText(spanData.statusCode, spanData.status);
     const durationMs = this.computeDurationMs(spanData);
+    const serviceMetadata = this.extractSpanServiceMetadata(spanData, options);
 
     if (attributes["db.system"] === "redis") {
       return {
@@ -540,6 +1047,7 @@ export class DevScopeCore {
         status,
         metadata: {
           key: attributes["db.redis.key"] ?? attributes["db.statement"] ?? "",
+          ...serviceMetadata,
         },
       };
     }
@@ -552,6 +1060,7 @@ export class DevScopeCore {
         status,
         metadata: {
           dbSystem: attributes["db.system"] ?? "unknown",
+          ...serviceMetadata,
         },
       };
     }
@@ -572,6 +1081,7 @@ export class DevScopeCore {
         metadata: {
           system: attributes["messaging.system"] ?? "unknown",
           topic: attributes["messaging.destination.name"] ?? "",
+          ...serviceMetadata,
         },
       };
     }
@@ -582,6 +1092,9 @@ export class DevScopeCore {
         name: `${attributes["job.queue"] ?? "queue"}:${attributes["job.name"] ?? spanName}:${attributes["job.action"] ?? "run"}`,
         durationMs,
         status,
+        metadata: {
+          ...serviceMetadata,
+        },
       };
     }
 
@@ -592,8 +1105,30 @@ export class DevScopeCore {
       status,
       metadata: {
         spanKind: spanData.kind ?? "internal",
+        ...serviceMetadata,
       },
     };
+  }
+
+  extractSpanServiceMetadata(spanData, options = {}) {
+    const attributes = spanData.attributes ?? {};
+    const sourceService =
+      options.serviceName ?? spanData.serviceName ?? attributes["service.name"];
+    const peerService =
+      attributes["peer.service"] ??
+      attributes["rpc.service"] ??
+      attributes["server.address"] ??
+      "";
+
+    const metadata = {};
+    if (sourceService) {
+      metadata.sourceService = String(sourceService);
+    }
+    if (peerService) {
+      metadata.peerService = String(peerService);
+    }
+
+    return metadata;
   }
 
   computeDurationMs(spanData) {
@@ -678,10 +1213,11 @@ export class DevScopeCore {
   }
 
   numericTimeToMs(value) {
-    if (value > 1_000_000_000_000_000) {
+    const now = Date.now();
+    if (value > now * 100_000) {
       return value / 1_000_000;
     }
-    if (value > 1_000_000_000_000) {
+    if (value > now * 100) {
       return value / 1000;
     }
     return value;
@@ -791,5 +1327,84 @@ export class DevScopeCore {
         traceId: trace.traceId,
         endpoint: `${trace.method} ${trace.path}`,
       }));
+  }
+
+  traceMatchesIncidentQuery(trace, query) {
+    if (!query) {
+      return false;
+    }
+
+    const traceFields = [trace.service, trace.path, trace.method, trace.error]
+      .filter(Boolean)
+      .map((value) => String(value).toLowerCase());
+
+    for (const field of traceFields) {
+      if (field.includes(query)) {
+        return true;
+      }
+    }
+
+    for (const event of trace.events) {
+      if (
+        String(event.name ?? "")
+          .toLowerCase()
+          .includes(query)
+      ) {
+        return true;
+      }
+
+      for (const value of Object.values(event.metadata ?? {})) {
+        if (String(value).toLowerCase().includes(query)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  extractServicesFromTrace(trace) {
+    const services = new Set();
+
+    if (trace.service) {
+      services.add(String(trace.service));
+    }
+
+    for (const event of trace.events) {
+      const sourceService = event.metadata?.sourceService;
+      const peerService = event.metadata?.peerService;
+
+      if (sourceService) {
+        services.add(String(sourceService));
+      }
+
+      if (peerService) {
+        services.add(String(peerService));
+      }
+    }
+
+    return services;
+  }
+
+  resolveScope(scope = {}) {
+    return {
+      tenantId: this.normalizeScopeValue(scope.tenantId, this.defaultTenantId),
+      projectId: this.normalizeScopeValue(
+        scope.projectId,
+        this.defaultProjectId,
+      ),
+      environment: this.normalizeScopeValue(
+        scope.environment,
+        this.defaultEnvironment,
+      ),
+    };
+  }
+
+  normalizeScopeValue(value, fallback) {
+    const normalized = String(value ?? "").trim();
+    if (normalized.length === 0) {
+      return fallback;
+    }
+    return normalized.slice(0, 80);
   }
 }

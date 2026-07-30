@@ -39,23 +39,23 @@ Status legend:
 - [x] If publishing npm package, restrict published files with files/.npmignore.
 
 ### Phase 5 - Production Multi-Service Observability (Future)
-- [ ] Define production architecture: control plane + collectors + dashboard.
-- [ ] Add secure remote ingestion endpoint for multi-service traces/events.
-- [ ] Add tenant/project model for teams and environments.
-- [ ] Add service registry to discover and group services by environment.
-- [ ] Expand connectors from status-only to telemetry collection mode.
-- [ ] Kubernetes: collect pod/service metrics, logs, rollout metadata.
-- [ ] Docker: collect container lifecycle, resource, and log metadata.
-- [ ] ECS: collect cluster/service/task telemetry and deployment events.
-- [ ] Nomad: collect job/allocation telemetry and deployment events.
-- [ ] Correlate incidents across services using trace/span relationships.
-- [ ] Add cross-service query UI (filter by service, cluster, namespace, env).
-- [ ] Add production-safe retention and storage backend (time-series + trace store).
-- [ ] Add RBAC, authn/authz, API keys, and audit logs.
-- [ ] Add alerting hooks (Slack, PagerDuty, webhooks) with incident context.
-- [ ] Add high-availability deployment mode and horizontal scaling.
-- [ ] Add SLO dashboards and burn-rate incident views.
-- [ ] Add onboarding docs for production connectors and security hardening.
+- [x] Define production architecture: control plane + collectors + dashboard (`PRODUCTION_ARCHITECTURE.md`).
+- [x] Add secure remote ingestion endpoint for multi-service traces/events.
+- [x] Add tenant/project model for teams and environments.
+- [x] Add service registry to discover and group services by environment.
+- [x] Expand connectors from status-only to telemetry collection mode.
+- [x] Kubernetes: collect pod/service metrics, logs, rollout metadata.
+- [x] Docker: collect container lifecycle, resource, and log metadata.
+- [x] ECS: collect cluster/service/task telemetry and deployment events.
+- [x] Nomad: collect job/allocation telemetry and deployment events.
+- [x] Correlate incidents across services using trace/span relationships.
+- [x] Add cross-service query UI (filter by service, cluster, namespace, env).
+- [x] Add production-safe retention and storage backend (time-series + trace store).
+- [x] Add RBAC, authn/authz, API keys, and audit logs.
+- [x] Add alerting hooks (Slack, PagerDuty, webhooks) with incident context.
+- [x] Add high-availability deployment mode and horizontal scaling.
+- [x] Add SLO dashboards and burn-rate incident views.
+- [x] Add onboarding docs for production connectors and security hardening.
 
 ### Phase 6 - Enterprise Operations and Intelligence (Future)
 - [ ] Multi-cluster and multi-region federation view.

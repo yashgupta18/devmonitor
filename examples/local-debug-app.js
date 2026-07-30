@@ -59,16 +59,32 @@ async function fakeBackgroundJob(devscope, traceId) {
 export async function startExampleApp(options = {}) {
   const dashboardPort = options.dashboardPort ?? 4318;
   const appPort = options.appPort ?? 3000;
-  const devscope = createDevScope({ dashboardPort });
+  const scope = options.scope ?? {};
+  const devscope = createDevScope({
+    dashboardPort,
+    defaultTenantId: scope.tenantId,
+    defaultProjectId: scope.projectId,
+    defaultEnvironment: scope.environment,
+    remoteIngest: options.remoteIngest,
+    storageBackend: options.storageBackend,
+    traceStorePath: options.traceStorePath,
+    timeSeriesRetentionMinutes: options.timeSeriesRetentionMinutes,
+    security: options.security,
+    alerting: options.alerting,
+    cluster: options.cluster,
+  });
   const sdk = createDevScopeSdk({
     core: devscope.core,
     serviceName: "example-checkout-service",
+    tenantId: scope.tenantId,
+    projectId: scope.projectId,
+    environment: scope.environment,
   });
 
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json());
-  app.use(devscope.middleware("example-checkout-service"));
+  app.use(devscope.middleware("example-checkout-service", scope));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });

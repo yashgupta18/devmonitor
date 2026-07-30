@@ -125,6 +125,164 @@ test("filters traces by endpoint, status, and method", () => {
   assert.equal(endpointAndMethod[0].traceId, okTrace.traceId);
 });
 
+test("supports tenant, project, and environment scope on traces", () => {
+  const core = new DevScopeCore({ maxTraces: 20 });
+
+  const tenantATrace = core.createTrace({
+    method: "GET",
+    path: "/orders",
+    service: "orders-api",
+    tenantId: "team-a",
+    projectId: "checkout",
+    environment: "prod",
+  });
+  core.finishTrace(tenantATrace.traceId, { statusCode: 200 });
+
+  const tenantBTrace = core.createTrace({
+    method: "GET",
+    path: "/orders",
+    service: "orders-api",
+    tenantId: "team-b",
+    projectId: "checkout",
+    environment: "staging",
+  });
+  core.finishTrace(tenantBTrace.traceId, { statusCode: 500 });
+
+  const filteredTraces = core.listTraces({
+    tenantId: "team-a",
+    projectId: "checkout",
+    environment: "prod",
+  });
+  assert.equal(filteredTraces.length, 1);
+  assert.equal(filteredTraces[0].traceId, tenantATrace.traceId);
+
+  const scopedStats = core.stats({ tenantId: "team-b" });
+  assert.equal(scopedStats.total, 1);
+  assert.equal(scopedStats.failed, 1);
+
+  const tenants = core.listTenants();
+  assert.equal(tenants.length, 2);
+  assert.equal(tenants[0].projects.length, 1);
+});
+
+test("builds service registry grouped by environment", () => {
+  const core = new DevScopeCore({ maxTraces: 20 });
+
+  const prodTrace = core.createTrace({
+    method: "GET",
+    path: "/checkout",
+    service: "checkout-api",
+    tenantId: "team-a",
+    projectId: "commerce",
+    environment: "prod",
+    startTimeMs: 1_000,
+  });
+  core.finishTrace(prodTrace.traceId, {
+    statusCode: 500,
+    endTimeMs: 1_120,
+  });
+  core.instrument.sql(prodTrace.traceId, {
+    query: "SELECT 1",
+    durationMs: 8,
+  });
+
+  const stagingTrace = core.createTrace({
+    method: "GET",
+    path: "/checkout",
+    service: "checkout-api",
+    tenantId: "team-a",
+    projectId: "commerce",
+    environment: "staging",
+    startTimeMs: 2_000,
+  });
+  core.finishTrace(stagingTrace.traceId, {
+    statusCode: 200,
+    endTimeMs: 2_040,
+  });
+
+  const registry = core.listServices();
+  assert.equal(registry.totalServices, 2);
+  assert.equal(registry.environments.length, 2);
+
+  const prodService = registry.services.find(
+    (service) => service.environment === "prod",
+  );
+  assert.ok(prodService);
+  assert.equal(prodService.errorCount, 1);
+  assert.ok(prodService.dependencies.includes("Database"));
+
+  const scoped = core.listServices({ environment: "staging" });
+  assert.equal(scoped.totalServices, 1);
+  assert.equal(scoped.services[0].environment, "staging");
+});
+
+test("buildIncidentCorrelations links impacted services from shared trace spans", () => {
+  const core = new DevScopeCore({ maxTraces: 20 });
+  const sharedTraceId = "00112233445566778899aabbccddeeff";
+
+  core.instrument.otelSpan(
+    {
+      traceId: sharedTraceId,
+      spanId: "root-1",
+      parentSpanId: "",
+      name: "http.checkout",
+      statusCode: 2,
+      status: "error",
+      attributes: {
+        "http.method": "POST",
+        "http.route": "/checkout",
+        "http.status_code": 500,
+      },
+      startTimeMs: Date.now() - 40,
+      endTimeMs: Date.now() - 10,
+    },
+    { serviceName: "gateway-service" },
+  );
+
+  core.instrument.otelSpan(
+    {
+      traceId: sharedTraceId,
+      spanId: "child-1",
+      parentSpanId: "root-1",
+      name: "rpc.checkout",
+      statusCode: 2,
+      status: "error",
+      attributes: {
+        "peer.service": "checkout-service",
+        "rpc.service": "checkout-service",
+      },
+      startTimeMs: Date.now() - 25,
+      endTimeMs: Date.now() - 5,
+    },
+    { serviceName: "gateway-service" },
+  );
+
+  const report = core.buildIncidentCorrelations({
+    incident: "checkout failure",
+    limit: 50,
+  });
+
+  assert.ok(report.candidateTraceCount >= 1);
+  assert.ok(report.correlatedTraceCount >= 1);
+  assert.ok(
+    report.impactedServices.some(
+      (service) => service.service === "gateway-service",
+    ),
+  );
+  assert.ok(
+    report.impactedServices.some(
+      (service) => service.service === "checkout-service",
+    ),
+  );
+  assert.ok(
+    report.relationships.some(
+      (relationship) =>
+        relationship.from === "checkout-service" ||
+        relationship.to === "checkout-service",
+    ),
+  );
+});
+
 test("maps OpenTelemetry SQL span to sql event", () => {
   const core = new DevScopeCore({ maxTraces: 10 });
 

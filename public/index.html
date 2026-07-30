@@ -217,6 +217,38 @@
             <option value="PATCH">PATCH</option>
             <option value="DELETE">DELETE</option>
           </select>
+
+          <label class="sr-only" for="serviceFilter">Filter service</label>
+          <input
+            id="serviceFilter"
+            type="text"
+            placeholder="Filter service (e.g. checkout-service)"
+          />
+
+          <label class="sr-only" for="clusterFilter">Filter cluster</label>
+          <input
+            id="clusterFilter"
+            type="text"
+            placeholder="Filter cluster/datacenter"
+          />
+
+          <label class="sr-only" for="namespaceFilter">Filter namespace</label>
+          <input
+            id="namespaceFilter"
+            type="text"
+            placeholder="Filter namespace"
+          />
+
+          <label class="sr-only" for="environmentFilter"
+            >Filter environment</label
+          >
+          <select id="environmentFilter">
+            <option value="">All environments</option>
+            <option value="local">local</option>
+            <option value="dev">dev</option>
+            <option value="staging">staging</option>
+            <option value="prod">prod</option>
+          </select>
         </div>
         <table>
           <thead>
@@ -262,6 +294,10 @@
         <div id="insightsMeta" class="muted">Insights not generated yet</div>
         <div id="insightsItems"></div>
 
+        <div class="subsection-title">SLO Burn-Rate View</div>
+        <div id="sloMeta" class="muted">SLO report not loaded yet</div>
+        <div id="sloItems"></div>
+
         <div class="subsection-title">GitHub Incident Intelligence</div>
         <div class="incident-controls">
           <label class="sr-only" for="incidentInput"
@@ -285,11 +321,19 @@
         endpoint: "",
         status: "",
         method: "",
+        service: "",
+        cluster: "",
+        namespace: "",
+        environment: "",
       };
 
       const endpointFilterEl = document.getElementById("endpointFilter");
       const statusFilterEl = document.getElementById("statusFilter");
       const methodFilterEl = document.getElementById("methodFilter");
+      const serviceFilterEl = document.getElementById("serviceFilter");
+      const clusterFilterEl = document.getElementById("clusterFilter");
+      const namespaceFilterEl = document.getElementById("namespaceFilter");
+      const environmentFilterEl = document.getElementById("environmentFilter");
       const incidentInputEl = document.getElementById("incidentInput");
       const incidentAnalyzeBtnEl =
         document.getElementById("incidentAnalyzeBtn");
@@ -299,6 +343,10 @@
           endpoint: endpointFilterEl.value.trim(),
           status: statusFilterEl.value,
           method: methodFilterEl.value,
+          service: serviceFilterEl.value.trim(),
+          cluster: clusterFilterEl.value.trim(),
+          namespace: namespaceFilterEl.value.trim(),
+          environment: environmentFilterEl.value,
         };
       }
 
@@ -533,6 +581,33 @@
           .join("");
       }
 
+      function renderSloReport(payload) {
+        const meta = document.getElementById("sloMeta");
+        const itemsEl = document.getElementById("sloItems");
+
+        if (!payload.services || payload.services.length === 0) {
+          meta.textContent = "No traces available for SLO computation.";
+          itemsEl.innerHTML =
+            '<div class="connector-item muted">Generate traffic to compute availability and burn rate.</div>';
+          return;
+        }
+
+        meta.textContent = `Window: ${payload.windowMinutes}m | Objective: ${payload.objectiveAvailability}% availability, p95 <= ${payload.objectiveP95Ms}ms`;
+        itemsEl.innerHTML = payload.services
+          .slice(0, 8)
+          .map(
+            (service) => `
+            <div class="connector-item">
+              <strong>${service.service}</strong><br />
+              Availability: ${service.availability}% | p95: ${service.p95Ms}ms<br />
+              Burn rate (short/long): ${service.shortBurnRate} / ${service.longBurnRate}<br />
+              Breach: ${service.availabilityBreached || service.latencyBreached ? "yes" : "no"}
+            </div>
+          `,
+          )
+          .join("");
+      }
+
       function renderIncidentReport(payload) {
         const meta = document.getElementById("incidentMeta");
         const itemsEl = document.getElementById("incidentItems");
@@ -590,6 +665,18 @@
         if (filters.method) {
           params.set("method", filters.method);
         }
+        if (filters.service) {
+          params.set("service", filters.service);
+        }
+        if (filters.cluster) {
+          params.set("cluster", filters.cluster);
+        }
+        if (filters.namespace) {
+          params.set("namespace", filters.namespace);
+        }
+        if (filters.environment) {
+          params.set("environment", filters.environment);
+        }
 
         const response = await fetch(`/api/traces?${params.toString()}`);
         const payload = await response.json();
@@ -601,18 +688,23 @@
           ecsResponse,
           nomadResponse,
           insightsResponse,
+          sloResponse,
         ] = await Promise.all([
           fetch("/api/connectors/docker"),
           fetch("/api/connectors/kubernetes"),
           fetch("/api/connectors/ecs"),
           fetch("/api/connectors/nomad"),
           fetch("/api/insights?limit=300"),
+          fetch(
+            "/api/slo?windowMinutes=60&shortWindowMinutes=5&objectiveAvailability=99.9&objectiveP95Ms=400",
+          ),
         ]);
         const dockerPayload = await dockerResponse.json();
         const kubernetesPayload = await kubernetesResponse.json();
         const ecsPayload = await ecsResponse.json();
         const nomadPayload = await nomadResponse.json();
         const insightsPayload = await insightsResponse.json();
+        const sloPayload = await sloResponse.json();
         cachedTraces = payload.traces;
         renderStats(payload.stats);
         renderTraceRows(payload.traces);
@@ -622,6 +714,7 @@
         renderEcsStatus(ecsPayload);
         renderNomadStatus(nomadPayload);
         renderInsights(insightsPayload);
+        renderSloReport(sloPayload);
       }
 
       endpointFilterEl.addEventListener("input", () => {
@@ -633,6 +726,22 @@
         refresh();
       });
       methodFilterEl.addEventListener("change", () => {
+        updateFilters();
+        refresh();
+      });
+      serviceFilterEl.addEventListener("input", () => {
+        updateFilters();
+        refresh();
+      });
+      clusterFilterEl.addEventListener("input", () => {
+        updateFilters();
+        refresh();
+      });
+      namespaceFilterEl.addEventListener("input", () => {
+        updateFilters();
+        refresh();
+      });
+      environmentFilterEl.addEventListener("change", () => {
         updateFilters();
         refresh();
       });

@@ -3,9 +3,10 @@ import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-ho
 import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
 
 class DevScopeSpanProcessor {
-  constructor(core, serviceName) {
+  constructor(core, serviceName, scope = {}) {
     this.core = core;
     this.serviceName = serviceName;
+    this.scope = scope;
   }
 
   onStart() {}
@@ -25,7 +26,12 @@ class DevScopeSpanProcessor {
         startTime: span.startTime,
         endTime: span.endTime,
       },
-      { serviceName: this.serviceName },
+      {
+        serviceName: this.serviceName,
+        tenantId: this.scope.tenantId,
+        projectId: this.scope.projectId,
+        environment: this.scope.environment,
+      },
     );
   }
 
@@ -38,13 +44,25 @@ class DevScopeSpanProcessor {
   }
 }
 
-export function createDevScopeSdk({ core, serviceName = "node-service" }) {
+export function createDevScopeSdk({
+  core,
+  serviceName = "node-service",
+  tenantId,
+  projectId,
+  environment,
+}) {
   if (!core?.instrument?.otelSpan) {
     throw new Error("DevScope core with instrument.otelSpan is required");
   }
 
   const provider = new BasicTracerProvider({
-    spanProcessors: [new DevScopeSpanProcessor(core, serviceName)],
+    spanProcessors: [
+      new DevScopeSpanProcessor(core, serviceName, {
+        tenantId,
+        projectId,
+        environment,
+      }),
+    ],
   });
 
   // Enable async context propagation so child spans preserve parent trace IDs.
@@ -87,7 +105,12 @@ export function createDevScopeSdk({ core, serviceName = "node-service" }) {
   }
 
   function recordSpan(spanData) {
-    return core.instrument.otelSpan(spanData, { serviceName });
+    return core.instrument.otelSpan(spanData, {
+      serviceName,
+      tenantId,
+      projectId,
+      environment,
+    });
   }
 
   return {

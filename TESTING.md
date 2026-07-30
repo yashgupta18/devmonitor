@@ -78,6 +78,25 @@ python ./examples/python-otel-example.py
 9. Kubernetes/ECS/Nomad connector panels display either discovered resources or clear unavailable messages.
 10. AI Explanations panel displays insight cards when slow/error/repeated query patterns exist.
 11. GitHub Incident Intelligence panel returns ranked suspect commits from recent git history.
+12. Secure remote ingest endpoint accepts valid API keys and rejects invalid ones.
+13. Tenant/project/environment scope is attached to traces and available in query filters.
+14. Tenant registry endpoint summarizes teams/projects/environments from observed traces.
+15. Services endpoint lists discovered services grouped by environment.
+16. Connector telemetry endpoint returns normalized signals per connector.
+17. Connector collect endpoint converts connector signals into trace timeline events.
+18. Kubernetes telemetry includes pod/service/rollout signals plus metrics and log summaries when available.
+19. Docker telemetry includes lifecycle/resource/log signals.
+20. ECS telemetry includes service/task/deployment/event signals.
+21. Nomad telemetry includes job/allocation/deployment/deployment-event signals.
+22. Incident correlation endpoint links impacted services and service relationships from traces/spans.
+23. Cross-service trace filters work for service, cluster/datacenter, namespace, and environment.
+24. File-backed trace store mode persists traces across process restarts.
+25. SLO endpoint reports availability, p95 latency, and short/long burn rates.
+26. Time-series endpoint returns minute-level request/error/latency buckets.
+27. RBAC enforces viewer/editor/admin API permissions with API keys.
+28. Audit endpoint returns allowed/denied security events.
+29. Alert hooks send incident-context notifications through configured channels.
+30. Cluster heartbeat/status endpoints expose active HA instance inventory.
 
 ## Quick Verification Checklist
 - [ ] Dashboard loads successfully.
@@ -90,12 +109,32 @@ python ./examples/python-otel-example.py
 - [ ] Nomad connector endpoint responds: `GET /api/connectors/nomad`.
 - [ ] AI insights endpoint responds: `GET /api/insights`.
 - [ ] GitHub intelligence endpoint responds: `POST /api/intelligence/github`.
+- [ ] Remote ingest endpoint responds with auth: `POST /api/remote/ingest/otel`.
+- [ ] Tenant registry endpoint responds: `GET /api/tenants`.
+- [ ] Scoped trace query works: `GET /api/traces?tenantId=...&projectId=...&environment=...`.
+- [ ] Service registry endpoint responds: `GET /api/services`.
+- [ ] Connector telemetry endpoint responds: `GET /api/connectors/:connector/telemetry`.
+- [ ] Connector collect endpoint responds: `POST /api/connectors/collect`.
+- [ ] Incident correlation endpoint responds: `POST /api/incidents/correlate`.
+- [ ] Cross-service query works: `GET /api/traces?service=...&cluster=...&namespace=...&environment=...`.
+- [ ] SLO endpoint responds: `GET /api/slo`.
+- [ ] Time-series endpoint responds: `GET /api/timeseries`.
+- [ ] RBAC is enforced when auth enabled (`DEVSCOPE_AUTH_ENABLED=true`).
+- [ ] Audit endpoint responds for admin key: `GET /api/audit`.
+- [ ] Alert test endpoint responds for admin key: `POST /api/alerts/test`.
+- [ ] Cluster endpoints respond: `POST /api/cluster/heartbeat`, `GET /api/cluster/status`.
 
 ## Current Limitations
 1. SQL/Redis/Kafka/Job events are simulated in the example app, not real drivers yet.
 2. No persistent storage yet (in-memory retention only).
 3. Python SDK currently sends spans over DevScope HTTP ingest API (not OTLP exporter yet).
 4. GitHub intelligence uses local git commit metadata + heuristic keyword scoring (no direct GitHub API integration yet).
+5. Remote ingest rate limiting is currently in-memory per API key + source IP.
+6. Tenant/project registry is inferred from retained in-memory traces.
+7. Service registry is inferred from retained traces and event-derived dependencies.
+8. Kubernetes and Docker metrics/log sampling is best-effort and may return warnings when tools or permissions are unavailable.
+9. ECS and Nomad telemetry collection is best-effort and may return partial warnings when some cluster/job subqueries fail.
+10. Incident correlation currently uses in-memory traces with heuristic candidate selection (errors, latency spikes, or incident text match).
 
 ## Included Automated Tests
 File: `tests/devscope-core.test.js`
@@ -104,8 +143,72 @@ File: `tests/devscope-core.test.js`
 3. SQL and Redis event correlation.
 4. OpenTelemetry span mapping and shared trace correlation.
 5. AI insight rules for slow endpoints, error rates, and repeated SQL patterns.
+6. incident correlation across services using span metadata.
 
 File: `tests/github-intelligence.test.js`
 1. git log parser behavior,
 2. commit scoring heuristic,
 3. graceful failure behavior when git metadata is unavailable.
+
+File: `tests/dashboard-remote-ingest.test.js`
+1. API key auth enforcement,
+2. valid ingest acceptance,
+3. spans-per-request limit validation,
+4. per-key rate limiting behavior.
+
+File: `tests/dashboard-tenancy.test.js`
+1. scoped ingest persistence from headers,
+2. scoped filtering via `GET /api/traces`,
+3. tenant/project/environment summary via `GET /api/tenants`.
+
+File: `tests/dashboard-services.test.js`
+1. service discovery grouped by environment,
+2. tenant/project/environment filtered service views.
+
+File: `tests/kubernetes-connector.test.js`
+1. pod parsing,
+2. service parsing,
+3. deployment rollout parsing,
+4. `kubectl top` metric table parsing,
+5. log summary parsing.
+
+File: `tests/dashboard-connectors-telemetry.test.js`
+1. connector telemetry route returns normalized signals,
+2. connector collect route ingests signals into scoped traces,
+3. collect route validates connector input,
+4. kubernetes telemetry route exposes rollout/service/log signal types,
+5. ecs telemetry route exposes service/task/deployment/event signal types,
+6. nomad telemetry route exposes job/allocation/deployment/event signal types.
+
+File: `tests/docker-connector.test.js`
+1. docker ps parser,
+2. docker stats parser,
+3. docker log summary parser.
+
+File: `tests/ecs-connector.test.js`
+1. cluster list/describe parsing,
+2. service list/describe parsing,
+3. task list/describe parsing.
+
+File: `tests/nomad-connector.test.js`
+1. node status parsing,
+2. job status parsing,
+3. job allocation parsing,
+4. job deployment parsing.
+
+File: `tests/dashboard-incidents.test.js`
+1. incident correlation endpoint returns impacted services and relationships with scope filters.
+
+File: `tests/dashboard-cross-service-filters.test.js`
+1. `GET /api/traces` filters by service, cluster, namespace, and environment.
+
+File: `tests/dashboard-phase5-production.test.js`
+1. RBAC authn/authz enforcement for viewer/editor/admin keys,
+2. audit log query support,
+3. SLO and time-series APIs,
+4. alert hook notification on incident correlation,
+5. cluster heartbeat and status APIs.
+
+File: `tests/storage-timeseries.test.js`
+1. file-backed trace store persistence across core restarts,
+2. time-series capture and SLO report generation.

@@ -1,6 +1,6 @@
 {
   "name": "@yashgupta18/devmonitor",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "devmonitor - open-source engineering intelligence platform for local debugging",
   "type": "module",
   "bin": {

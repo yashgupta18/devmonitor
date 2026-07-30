@@ -28,6 +28,13 @@ It lets you run a sample service and immediately inspect:
 
 ## Quick Start
 
+Install from npm (global CLI):
+
+```bash
+npm install -g @appscope/devmonitor
+devmonitor start
+```
+
 1. Install dependencies:
 
 ```bash
@@ -157,6 +164,12 @@ python ./examples/python-otel-example.py
 - `POST /api/connectors/collect`
 
 ## CLI
+
+If installed from npm globally:
+
+```bash
+devmonitor start
+```
 
 Start DevScope:
 

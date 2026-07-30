@@ -1,10 +1,10 @@
 {
-  "name": "devscope",
-  "version": "0.1.0",
+  "name": "@appscope/devmonitor",
+  "version": "0.1.1",
   "description": "DevScope - open-source engineering intelligence platform for local debugging",
   "type": "module",
   "bin": {
-    "devscope": "./src/cli.js"
+    "devmonitor": "./src/cli.js"
   },
   "scripts": {
     "devscope:start": "node ./src/cli.js start",
@@ -26,6 +26,9 @@
     "developer-tools"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-async-hooks": "^1.25.1",

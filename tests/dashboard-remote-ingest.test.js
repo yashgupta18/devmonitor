@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevMonitorCore } from "../src/devmonitor/core.js";
-import { createDashboardServer } from "../src/devmonitor/dashboard.js";
+import { DevTraceKitCore } from "../src/devtracekit/core.js";
+import { createDashboardServer } from "../src/devtracekit/dashboard.js";
 
 async function createTestServer(overrides = {}) {
-  const core = new DevMonitorCore({ maxTraces: 100 });
+  const core = new DevTraceKitCore({ maxTraces: 100 });
   const dashboard = createDashboardServer(
     core,
     {},
@@ -71,7 +71,7 @@ test("remote ingest accepts valid API key and stores traces", async (t) => {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devmonitor-api-key": "test-key",
+      "x-devtracekit-api-key": "test-key",
     },
     body: JSON.stringify({
       serviceName: "remote-checkout",
@@ -105,7 +105,7 @@ test("remote ingest enforces spans per request limit", async (t) => {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devmonitor-api-key": "test-key",
+      "x-devtracekit-api-key": "test-key",
     },
     body: JSON.stringify({
       serviceName: "remote-checkout",
@@ -137,7 +137,7 @@ test("remote ingest applies per-key rate limiting", async (t) => {
 
   const headers = {
     "content-type": "application/json",
-    "x-devmonitor-api-key": "test-key",
+    "x-devtracekit-api-key": "test-key",
   };
 
   const first = await fetch(`${server.baseUrl}/api/remote/ingest/otel`, {

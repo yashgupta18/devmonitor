@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 import express from "express";
-import { createDevMonitor } from "./devmonitor/index.js";
+import { createDevTraceKit } from "./devtracekit/index.js";
 import { startExampleApp } from "../examples/local-debug-app.js";
 
 function parseArgs(argv) {
   const args = new Set(argv.slice(2));
-  const rawRemoteKeys = String(process.env.DEVMONITOR_REMOTE_INGEST_KEYS ?? "");
+  const rawRemoteKeys = String(process.env.DEVTRACEKIT_REMOTE_INGEST_KEYS ?? "");
   const remoteKeys = rawRemoteKeys
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-  const rawAuthKeys = String(process.env.DEVMONITOR_API_KEYS ?? "");
+  const rawAuthKeys = String(process.env.DEVTRACEKIT_API_KEYS ?? "");
   const authKeys = rawAuthKeys
     .split(",")
     .map((value) => value.trim())
@@ -27,12 +27,12 @@ function parseArgs(argv) {
   return {
     command: argv[2],
     example: args.has("--example"),
-    dashboardPort: Number(process.env.DEVMONITOR_DASHBOARD_PORT ?? 4318),
-    appPort: Number(process.env.DEVMONITOR_APP_PORT ?? 3000),
+    dashboardPort: Number(process.env.DEVTRACEKIT_DASHBOARD_PORT ?? 4318),
+    appPort: Number(process.env.DEVTRACEKIT_APP_PORT ?? 3000),
     scope: {
-      tenantId: process.env.DEVMONITOR_TENANT_ID,
-      projectId: process.env.DEVMONITOR_PROJECT_ID,
-      environment: process.env.DEVMONITOR_ENVIRONMENT,
+      tenantId: process.env.DEVTRACEKIT_TENANT_ID,
+      projectId: process.env.DEVTRACEKIT_PROJECT_ID,
+      environment: process.env.DEVTRACEKIT_ENVIRONMENT,
     },
     remoteIngest:
       remoteKeys.length > 0
@@ -40,44 +40,44 @@ function parseArgs(argv) {
             enabled: true,
             apiKeys: remoteKeys,
             rateLimitWindowMs: Number(
-              process.env.DEVMONITOR_REMOTE_RATE_LIMIT_WINDOW_MS ?? 60_000,
+              process.env.DEVTRACEKIT_REMOTE_RATE_LIMIT_WINDOW_MS ?? 60_000,
             ),
             rateLimitMaxRequests: Number(
-              process.env.DEVMONITOR_REMOTE_RATE_LIMIT_MAX_REQUESTS ?? 120,
+              process.env.DEVTRACEKIT_REMOTE_RATE_LIMIT_MAX_REQUESTS ?? 120,
             ),
             maxSpansPerRequest: Number(
-              process.env.DEVMONITOR_REMOTE_MAX_SPANS_PER_REQUEST ?? 500,
+              process.env.DEVTRACEKIT_REMOTE_MAX_SPANS_PER_REQUEST ?? 500,
             ),
           }
         : { enabled: false, apiKeys: [] },
-    storageBackend: process.env.DEVMONITOR_STORAGE_BACKEND ?? "memory",
-    traceStorePath: process.env.DEVMONITOR_TRACE_STORE_PATH,
+    storageBackend: process.env.DEVTRACEKIT_STORAGE_BACKEND ?? "memory",
+    traceStorePath: process.env.DEVTRACEKIT_TRACE_STORE_PATH,
     timeSeriesRetentionMinutes: Number(
-      process.env.DEVMONITOR_TIMESERIES_RETENTION_MINUTES ?? 1440,
+      process.env.DEVTRACEKIT_TIMESERIES_RETENTION_MINUTES ?? 1440,
     ),
     security: {
-      enabled: String(process.env.DEVMONITOR_AUTH_ENABLED ?? "false") === "true",
+      enabled: String(process.env.DEVTRACEKIT_AUTH_ENABLED ?? "false") === "true",
       apiKeys: authKeys,
-      auditMaxEntries: Number(process.env.DEVMONITOR_AUDIT_MAX_ENTRIES ?? 5000),
+      auditMaxEntries: Number(process.env.DEVTRACEKIT_AUDIT_MAX_ENTRIES ?? 5000),
     },
     alerting: {
       enabled:
-        String(process.env.DEVMONITOR_ALERTING_ENABLED ?? "false") === "true",
-      slackWebhookUrl: process.env.DEVMONITOR_SLACK_WEBHOOK_URL,
-      pagerDutyWebhookUrl: process.env.DEVMONITOR_PAGERDUTY_WEBHOOK_URL,
-      webhookUrl: process.env.DEVMONITOR_WEBHOOK_URL,
+        String(process.env.DEVTRACEKIT_ALERTING_ENABLED ?? "false") === "true",
+      slackWebhookUrl: process.env.DEVTRACEKIT_SLACK_WEBHOOK_URL,
+      pagerDutyWebhookUrl: process.env.DEVTRACEKIT_PAGERDUTY_WEBHOOK_URL,
+      webhookUrl: process.env.DEVTRACEKIT_WEBHOOK_URL,
     },
     cluster: {
       enabled:
-        String(process.env.DEVMONITOR_CLUSTER_ENABLED ?? "false") === "true",
-      deploymentMode: process.env.DEVMONITOR_DEPLOYMENT_MODE ?? "single-node",
-      ttlMs: Number(process.env.DEVMONITOR_CLUSTER_TTL_MS ?? 30_000),
+        String(process.env.DEVTRACEKIT_CLUSTER_ENABLED ?? "false") === "true",
+      deploymentMode: process.env.DEVTRACEKIT_DEPLOYMENT_MODE ?? "single-node",
+      ttlMs: Number(process.env.DEVTRACEKIT_CLUSTER_TTL_MS ?? 30_000),
     },
   };
 }
 
 async function startStandalone(options) {
-  const devmonitor = createDevMonitor({
+  const devtracekit = createDevTraceKit({
     dashboardPort: options.dashboardPort,
     defaultTenantId: options.scope.tenantId,
     defaultProjectId: options.scope.projectId,
@@ -92,18 +92,18 @@ async function startStandalone(options) {
   });
   const app = express();
   app.disable("x-powered-by");
-  app.use(devmonitor.middleware("standalone-app", options.scope));
+  app.use(devtracekit.middleware("standalone-app", options.scope));
 
   app.get("/", (_req, res) => {
     res.json({
-      message: "DevMonitor standalone app running",
-      hint: "Use devmonitor start --example for full flow simulation",
+      message: "DevTraceKit standalone app running",
+      hint: "Use devtracekit start --example for full flow simulation",
     });
   });
 
   app.listen(options.appPort, () => {
     console.log(
-      `[devmonitor] app running on http://localhost:${options.appPort}`,
+      `[devtracekit] app running on http://localhost:${options.appPort}`,
     );
   });
 }
@@ -112,7 +112,7 @@ async function main() {
   const options = parseArgs(process.argv);
 
   if (options.command !== "start") {
-    console.log("Usage: devmonitor start [--example]");
+    console.log("Usage: devtracekit start [--example]");
     process.exit(1);
   }
 
@@ -138,6 +138,6 @@ async function main() {
 try {
   await main();
 } catch (error) {
-  console.error("[devmonitor] failed to start", error);
+  console.error("[devtracekit] failed to start", error);
   process.exit(1);
 }

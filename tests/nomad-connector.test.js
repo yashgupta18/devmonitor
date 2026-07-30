@@ -5,19 +5,19 @@ import {
   parseNomadJobDeploymentsJson,
   parseNomadJobStatusJson,
   parseNomadNodeStatusJson,
-} from "../src/devmonitor/nomad-connector.js";
+} from "../src/devtracekit/nomad-connector.js";
 
 test("parses nomad node status json", () => {
   const stdout = JSON.stringify([
     {
       ID: "node-1",
-      Name: "devmonitor-node-1",
+      Name: "devtracekit-node-1",
       Datacenter: "dc1",
       Status: "ready",
     },
     {
       ID: "node-2",
-      Name: "devmonitor-node-2",
+      Name: "devtracekit-node-2",
       Datacenter: "dc1",
       Status: "down",
     },
@@ -26,7 +26,7 @@ test("parses nomad node status json", () => {
   const nodes = parseNomadNodeStatusJson(stdout);
   assert.equal(nodes.length, 2);
   assert.equal(nodes[0].status, "ready");
-  assert.equal(nodes[1].name, "devmonitor-node-2");
+  assert.equal(nodes[1].name, "devtracekit-node-2");
 });
 
 test("parses nomad job status json", () => {

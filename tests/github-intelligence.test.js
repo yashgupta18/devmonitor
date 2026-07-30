@@ -4,7 +4,7 @@ import {
   createGitHubIntelligence,
   parseGitLogOutput,
   scoreCommit,
-} from "../src/devmonitor/github-intelligence.js";
+} from "../src/devtracekit/github-intelligence.js";
 
 test("parseGitLogOutput parses commit lines", () => {
   const output = [

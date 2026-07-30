@@ -9,7 +9,7 @@ function generateId() {
   return crypto.randomUUID();
 }
 
-export class DevMonitorCore {
+export class DevTraceKitCore {
   constructor(options = {}) {
     this.maxTraces = options.maxTraces ?? 1000;
     this.maxEventsPerTrace = options.maxEventsPerTrace ?? 200;
@@ -1560,12 +1560,12 @@ export class DevMonitorCore {
         environment: traceScope.environment,
       });
 
-      req.devmonitor = {
+      req.devtracekit = {
         traceId: trace.traceId,
         addEvent: (event) => this.addEvent(trace.traceId, event),
       };
 
-      res.setHeader("x-devmonitor-trace-id", trace.traceId);
+      res.setHeader("x-devtracekit-trace-id", trace.traceId);
 
       res.on("finish", () => {
         this.finishTrace(trace.traceId, { statusCode: res.statusCode });

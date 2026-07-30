@@ -1,45 +1,45 @@
 import express from "express";
 import crypto from "node:crypto";
-import { createDevMonitor } from "../src/devmonitor/index.js";
-import { createDevMonitorSdk } from "../packages/devmonitor-sdk/index.js";
+import { createDevTraceKit } from "../src/devtracekit/index.js";
+import { createDevTraceKitSdk } from "../packages/devtracekit-sdk/index.js";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fakeSqlQuery(devmonitor, traceId) {
+async function fakeSqlQuery(devtracekit, traceId) {
   const duration = crypto.randomInt(25, 85);
   await sleep(duration);
-  devmonitor.instrument.sql(traceId, {
+  devtracekit.instrument.sql(traceId, {
     query: "SELECT id, status, total FROM orders WHERE user_id = $1",
     durationMs: duration,
   });
 }
 
-async function fakeRedisLookup(devmonitor, traceId) {
+async function fakeRedisLookup(devtracekit, traceId) {
   const duration = crypto.randomInt(5, 20);
   await sleep(duration);
-  devmonitor.instrument.redis(traceId, {
+  devtracekit.instrument.redis(traceId, {
     command: "GET",
     key: "cart:user:123",
     durationMs: duration,
   });
 }
 
-async function fakeKafkaPublish(devmonitor, traceId) {
+async function fakeKafkaPublish(devtracekit, traceId) {
   const duration = crypto.randomInt(10, 30);
   await sleep(duration);
-  devmonitor.instrument.kafka(traceId, {
+  devtracekit.instrument.kafka(traceId, {
     topic: "checkout-events",
     action: "publish",
     durationMs: duration,
   });
 }
 
-async function fakeBackgroundJob(devmonitor, traceId) {
+async function fakeBackgroundJob(devtracekit, traceId) {
   const startDuration = crypto.randomInt(4, 14);
   await sleep(startDuration);
-  devmonitor.instrument.job(traceId, {
+  devtracekit.instrument.job(traceId, {
     queue: "email",
     jobName: "send-order-confirmation",
     action: "enqueue",
@@ -48,7 +48,7 @@ async function fakeBackgroundJob(devmonitor, traceId) {
 
   const completeDuration = crypto.randomInt(15, 45);
   await sleep(completeDuration);
-  devmonitor.instrument.job(traceId, {
+  devtracekit.instrument.job(traceId, {
     queue: "email",
     jobName: "send-order-confirmation",
     action: "complete",
@@ -60,7 +60,7 @@ export async function startExampleApp(options = {}) {
   const dashboardPort = options.dashboardPort ?? 4318;
   const appPort = options.appPort ?? 3000;
   const scope = options.scope ?? {};
-  const devmonitor = createDevMonitor({
+  const devtracekit = createDevTraceKit({
     dashboardPort,
     defaultTenantId: scope.tenantId,
     defaultProjectId: scope.projectId,
@@ -73,8 +73,8 @@ export async function startExampleApp(options = {}) {
     alerting: options.alerting,
     cluster: options.cluster,
   });
-  const sdk = createDevMonitorSdk({
-    core: devmonitor.core,
+  const sdk = createDevTraceKitSdk({
+    core: devtracekit.core,
     serviceName: "example-checkout-service",
     tenantId: scope.tenantId,
     projectId: scope.projectId,
@@ -84,20 +84,20 @@ export async function startExampleApp(options = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json());
-  app.use(devmonitor.middleware("example-checkout-service", scope));
+  app.use(devtracekit.middleware("example-checkout-service", scope));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
 
   app.get("/checkout", async (req, res) => {
-    const traceId = req.devmonitor.traceId;
+    const traceId = req.devtracekit.traceId;
 
     try {
-      await fakeRedisLookup(devmonitor, traceId);
-      await fakeSqlQuery(devmonitor, traceId);
-      await fakeKafkaPublish(devmonitor, traceId);
-      await fakeBackgroundJob(devmonitor, traceId);
+      await fakeRedisLookup(devtracekit, traceId);
+      await fakeSqlQuery(devtracekit, traceId);
+      await fakeKafkaPublish(devtracekit, traceId);
+      await fakeBackgroundJob(devtracekit, traceId);
 
       res.json({
         ok: true,
@@ -105,7 +105,7 @@ export async function startExampleApp(options = {}) {
         traceId,
       });
     } catch (error) {
-      req.devmonitor.addEvent({
+      req.devtracekit.addEvent({
         type: "error",
         name: "checkout_flow_error",
         status: "error",
@@ -197,15 +197,15 @@ export async function startExampleApp(options = {}) {
 
   app.listen(appPort, () => {
     console.log(
-      `[devmonitor] example app running on http://localhost:${appPort}`,
+      `[devtracekit] example app running on http://localhost:${appPort}`,
     );
     console.log(
-      `[devmonitor] test endpoint: http://localhost:${appPort}/checkout`,
+      `[devtracekit] test endpoint: http://localhost:${appPort}/checkout`,
     );
     console.log(
-      `[devmonitor] otel endpoint: http://localhost:${appPort}/otel-checkout`,
+      `[devtracekit] otel endpoint: http://localhost:${appPort}/otel-checkout`,
     );
-    console.log(`[devmonitor] dashboard: http://localhost:${dashboardPort}`);
+    console.log(`[devtracekit] dashboard: http://localhost:${dashboardPort}`);
   });
 }
 
@@ -213,7 +213,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     await startExampleApp();
   } catch (error) {
-    console.error("[devmonitor] example app failed", error);
+    console.error("[devtracekit] example app failed", error);
     process.exit(1);
   }
 }

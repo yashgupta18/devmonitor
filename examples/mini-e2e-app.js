@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "node:crypto";
-import { createDevMonitor } from "../src/devmonitor/index.js";
+import { createDevTraceKit } from "../src/devtracekit/index.js";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -12,19 +12,19 @@ function randomInt(min, max) {
 
 export async function startMiniE2eApp(options = {}) {
   const dashboardPort = Number(
-    options.dashboardPort ?? process.env.DEVMONITOR_DASHBOARD_PORT ?? 4318,
+    options.dashboardPort ?? process.env.DEVTRACEKIT_DASHBOARD_PORT ?? 4318,
   );
   const appPort = Number(
-    options.appPort ?? process.env.DEVMONITOR_MINI_APP_PORT ?? 3050,
+    options.appPort ?? process.env.DEVTRACEKIT_MINI_APP_PORT ?? 3050,
   );
 
   const scope = {
-    tenantId: process.env.DEVMONITOR_TENANT_ID ?? "team-mini",
-    projectId: process.env.DEVMONITOR_PROJECT_ID ?? "storefront",
-    environment: process.env.DEVMONITOR_ENVIRONMENT ?? "prod",
+    tenantId: process.env.DEVTRACEKIT_TENANT_ID ?? "team-mini",
+    projectId: process.env.DEVTRACEKIT_PROJECT_ID ?? "storefront",
+    environment: process.env.DEVTRACEKIT_ENVIRONMENT ?? "prod",
   };
 
-  const devmonitor = createDevMonitor({
+  const devtracekit = createDevTraceKit({
     dashboardPort,
     defaultTenantId: scope.tenantId,
     defaultProjectId: scope.projectId,
@@ -34,7 +34,7 @@ export async function startMiniE2eApp(options = {}) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json());
-  app.use(devmonitor.middleware("mini-gateway", scope));
+  app.use(devtracekit.middleware("mini-gateway", scope));
 
   const appBase = `http://127.0.0.1:${appPort}`;
   const dashboardBase = `http://127.0.0.1:${dashboardPort}`;
@@ -46,9 +46,9 @@ export async function startMiniE2eApp(options = {}) {
         : undefined;
     const headers = {
       "content-type": "application/json",
-      "x-devmonitor-tenant-id": scope.tenantId,
-      "x-devmonitor-project-id": scope.projectId,
-      "x-devmonitor-environment": scope.environment,
+      "x-devtracekit-tenant-id": scope.tenantId,
+      "x-devtracekit-project-id": scope.projectId,
+      "x-devtracekit-environment": scope.environment,
       ...extraHeaders,
     };
 
@@ -68,7 +68,7 @@ export async function startMiniE2eApp(options = {}) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>devmonitor Mini E2E App</title>
+    <title>devtracekit Mini E2E App</title>
     <style>
       body {
         font-family: "Segoe UI", sans-serif;
@@ -122,7 +122,7 @@ export async function startMiniE2eApp(options = {}) {
   </head>
   <body>
     <div class="card">
-      <h1>devmonitor Mini E2E App</h1>
+      <h1>devtracekit Mini E2E App</h1>
       <p>
         This app is running on <code>http://localhost:${appPort}</code> and the
         dashboard is at <a href="http://localhost:${dashboardPort}" target="_blank" rel="noreferrer">http://localhost:${dashboardPort}</a>.
@@ -173,17 +173,17 @@ export async function startMiniE2eApp(options = {}) {
   });
 
   app.get("/catalog", async (req, res) => {
-    const traceId = req.devmonitor.traceId;
+    const traceId = req.devtracekit.traceId;
     const duration = randomInt(6, 20);
     await sleep(duration);
 
-    devmonitor.instrument.sql(traceId, {
+    devtracekit.instrument.sql(traceId, {
       query: "SELECT id, price FROM catalog WHERE active = true LIMIT 10",
       durationMs: duration,
       status: "ok",
     });
 
-    req.devmonitor.addEvent({
+    req.devtracekit.addEvent({
       type: "otel",
       name: "rpc.catalog",
       durationMs: randomInt(10, 25),
@@ -201,33 +201,33 @@ export async function startMiniE2eApp(options = {}) {
   });
 
   app.get("/checkout", async (req, res) => {
-    const traceId = req.devmonitor.traceId;
+    const traceId = req.devtracekit.traceId;
     const shouldFail = String(req.query.fail ?? "0") === "1";
     const shouldSlow = String(req.query.slow ?? "0") === "1";
 
     await sleep(shouldSlow ? randomInt(180, 320) : randomInt(25, 80));
 
-    devmonitor.instrument.redis(traceId, {
+    devtracekit.instrument.redis(traceId, {
       command: "GET",
       key: "cart:user:42",
       durationMs: randomInt(4, 18),
       status: "ok",
     });
 
-    devmonitor.instrument.sql(traceId, {
+    devtracekit.instrument.sql(traceId, {
       query: "SELECT id, status, total FROM orders WHERE user_id = $1",
       durationMs: shouldSlow ? randomInt(90, 210) : randomInt(25, 70),
       status: shouldFail ? "error" : "ok",
     });
 
-    devmonitor.instrument.kafka(traceId, {
+    devtracekit.instrument.kafka(traceId, {
       topic: "checkout-events",
       action: "publish",
       durationMs: randomInt(8, 24),
       status: shouldFail ? "error" : "ok",
     });
 
-    req.devmonitor.addEvent({
+    req.devtracekit.addEvent({
       type: "otel",
       name: "rpc.payments",
       durationMs: shouldSlow ? randomInt(140, 260) : randomInt(30, 90),
@@ -241,7 +241,7 @@ export async function startMiniE2eApp(options = {}) {
       },
     });
 
-    req.devmonitor.addEvent({
+    req.devtracekit.addEvent({
       type: "otel",
       name: "rpc.inventory",
       durationMs: randomInt(15, 60),

@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevMonitorCore } from "../src/devmonitor/core.js";
-import { createDashboardServer } from "../src/devmonitor/dashboard.js";
+import { DevTraceKitCore } from "../src/devtracekit/core.js";
+import { createDashboardServer } from "../src/devtracekit/dashboard.js";
 
 async function createTelemetryServer() {
-  const core = new DevMonitorCore({ maxTraces: 100 });
+  const core = new DevTraceKitCore({ maxTraces: 100 });
   const connectors = {
     docker: {
       getTelemetry: async () => ({
@@ -74,25 +74,25 @@ async function createTelemetryServer() {
         signals: [
           {
             type: "service",
-            name: "devmonitor-a/checkout-api",
+            name: "devtracekit-a/checkout-api",
             status: "ok",
             metadata: { desiredCount: 3, runningCount: 3 },
           },
           {
             type: "task",
-            name: "devmonitor-a/task-1",
+            name: "devtracekit-a/task-1",
             status: "ok",
             metadata: { launchType: "FARGATE", cpu: "256" },
           },
           {
             type: "deployment",
-            name: "devmonitor-a/checkout-api:ecs-svc/123",
+            name: "devtracekit-a/checkout-api:ecs-svc/123",
             status: "warn",
             metadata: { rolloutState: "IN_PROGRESS" },
           },
           {
             type: "service-event",
-            name: "devmonitor-a/checkout-api",
+            name: "devtracekit-a/checkout-api",
             status: "info",
             metadata: { message: "service reached steady state" },
           },
@@ -249,9 +249,9 @@ test("connector collect ingests telemetry into scoped traces", async (t) => {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devmonitor-tenant-id": "team-ops",
-      "x-devmonitor-project-id": "platform",
-      "x-devmonitor-environment": "prod",
+      "x-devtracekit-tenant-id": "team-ops",
+      "x-devtracekit-project-id": "platform",
+      "x-devtracekit-environment": "prod",
     },
     body: JSON.stringify({
       connector: "docker",

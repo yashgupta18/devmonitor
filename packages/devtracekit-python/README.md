@@ -1,19 +1,19 @@
-# devmonitor (Python)
+# devtracekit (Python)
 
-Python SDK bridge for sending OpenTelemetry-style spans to a local DevMonitor instance.
+Python SDK bridge for sending OpenTelemetry-style spans to a local DevTraceKit instance.
 
 ## Install (editable)
 
 ```bash
-pip install -e ./packages/devmonitor-python
+pip install -e ./packages/devtracekit-python
 ```
 
 ## Quick start
 
 ```python
-from devmonitor import DevMonitorClient
+from devtracekit import DevTraceKitClient
 
-client = DevMonitorClient(
+client = DevTraceKitClient(
     ingest_url="http://localhost:4318/api/ingest/otel",
     service_name="python-checkout-service",
 )

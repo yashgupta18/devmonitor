@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>devmonitor</title>
+    <title>devtracekit</title>
     <style>
       :root {
         --bg-0: #f4fbfa;
@@ -377,7 +377,7 @@
       <header class="topbar">
         <div class="topbar-main">
           <div class="title-wrap">
-            <h1>devmonitor Control Plane</h1>
+            <h1>devtracekit Control Plane</h1>
             <div class="muted">
               Observability, risk, and incident context in one place.
             </div>
@@ -712,7 +712,7 @@
 
       function loadSettings() {
         try {
-          const raw = localStorage.getItem("devmonitor-ui-settings");
+          const raw = localStorage.getItem("devtracekit-ui-settings");
           if (!raw) {
             return;
           }
@@ -728,7 +728,7 @@
 
       function persistSettings() {
         localStorage.setItem(
-          "devmonitor-ui-settings",
+          "devtracekit-ui-settings",
           JSON.stringify(uiSettings),
         );
       }

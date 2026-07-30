@@ -1,4 +1,4 @@
-# Mini Example App: End-to-End devmonitor Validation
+# Mini Example App: End-to-End devtracekit Validation
 
 This mini app generates traces, service dependencies, federation metadata, GitOps events, canary signals, cost/capacity data, and incident postmortem/replay artifacts.
 
@@ -41,7 +41,7 @@ Open the mini app landing page at:
 Optional custom ports:
 
 ```bash
-DEVMONITOR_DASHBOARD_PORT=4328 DEVMONITOR_MINI_APP_PORT=3051 npm run example:mini
+DEVTRACEKIT_DASHBOARD_PORT=4328 DEVTRACEKIT_MINI_APP_PORT=3051 npm run example:mini
 ```
 
 If `http://localhost:3050/` shows `Cannot GET /` with CSP `default-src 'none'`, an older mini app process is still running. Stop it and start again:
@@ -108,5 +108,5 @@ The mini app uses these defaults unless overridden:
 You can override using:
 
 ```bash
-DEVMONITOR_TENANT_ID=team-x DEVMONITOR_PROJECT_ID=checkout DEVMONITOR_ENVIRONMENT=staging npm run example:mini
+DEVTRACEKIT_TENANT_ID=team-x DEVTRACEKIT_PROJECT_ID=checkout DEVTRACEKIT_ENVIRONMENT=staging npm run example:mini
 ```

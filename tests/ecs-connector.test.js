@@ -7,13 +7,13 @@ import {
   parseEcsListClustersJson,
   parseEcsListServicesJson,
   parseEcsListTasksJson,
-} from "../src/devmonitor/ecs-connector.js";
+} from "../src/devtracekit/ecs-connector.js";
 
 test("parses ecs list clusters json", () => {
   const stdout = JSON.stringify({
     clusterArns: [
-      "arn:aws:ecs:us-east-1:111111111111:cluster/devmonitor-a",
-      "arn:aws:ecs:us-east-1:111111111111:cluster/devmonitor-b",
+      "arn:aws:ecs:us-east-1:111111111111:cluster/devtracekit-a",
+      "arn:aws:ecs:us-east-1:111111111111:cluster/devtracekit-b",
     ],
   });
 
@@ -25,8 +25,8 @@ test("parses ecs describe clusters json", () => {
   const stdout = JSON.stringify({
     clusters: [
       {
-        clusterArn: "arn:aws:ecs:us-east-1:111111111111:cluster/devmonitor-a",
-        clusterName: "devmonitor-a",
+        clusterArn: "arn:aws:ecs:us-east-1:111111111111:cluster/devtracekit-a",
+        clusterName: "devtracekit-a",
         status: "ACTIVE",
         runningTasksCount: 3,
         pendingTasksCount: 1,
@@ -37,15 +37,15 @@ test("parses ecs describe clusters json", () => {
 
   const clusters = parseEcsDescribeClustersJson(stdout);
   assert.equal(clusters.length, 1);
-  assert.equal(clusters[0].name, "devmonitor-a");
+  assert.equal(clusters[0].name, "devtracekit-a");
   assert.equal(clusters[0].runningTasksCount, 3);
 });
 
 test("parses ecs list services json", () => {
   const stdout = JSON.stringify({
     serviceArns: [
-      "arn:aws:ecs:us-east-1:111111111111:service/devmonitor-a/api",
-      "arn:aws:ecs:us-east-1:111111111111:service/devmonitor-a/worker",
+      "arn:aws:ecs:us-east-1:111111111111:service/devtracekit-a/api",
+      "arn:aws:ecs:us-east-1:111111111111:service/devtracekit-a/worker",
     ],
   });
 
@@ -57,7 +57,7 @@ test("parses ecs describe services json", () => {
   const stdout = JSON.stringify({
     services: [
       {
-        serviceArn: "arn:aws:ecs:us-east-1:111111111111:service/devmonitor-a/api",
+        serviceArn: "arn:aws:ecs:us-east-1:111111111111:service/devtracekit-a/api",
         serviceName: "api",
         status: "ACTIVE",
         desiredCount: 3,
@@ -95,8 +95,8 @@ test("parses ecs describe services json", () => {
 test("parses ecs list tasks json", () => {
   const stdout = JSON.stringify({
     taskArns: [
-      "arn:aws:ecs:us-east-1:111111111111:task/devmonitor-a/task-1",
-      "arn:aws:ecs:us-east-1:111111111111:task/devmonitor-a/task-2",
+      "arn:aws:ecs:us-east-1:111111111111:task/devtracekit-a/task-1",
+      "arn:aws:ecs:us-east-1:111111111111:task/devtracekit-a/task-2",
     ],
   });
 
@@ -108,7 +108,7 @@ test("parses ecs describe tasks json", () => {
   const stdout = JSON.stringify({
     tasks: [
       {
-        taskArn: "arn:aws:ecs:us-east-1:111111111111:task/devmonitor-a/task-1",
+        taskArn: "arn:aws:ecs:us-east-1:111111111111:task/devtracekit-a/task-1",
         taskDefinitionArn:
           "arn:aws:ecs:us-east-1:111111111111:task-definition/api:42",
         lastStatus: "RUNNING",

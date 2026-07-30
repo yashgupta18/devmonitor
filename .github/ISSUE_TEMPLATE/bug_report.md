@@ -26,7 +26,7 @@ What happened?
 
 - OS:
 - Node version:
-- devmonitor version/commit:
+- devtracekit version/commit:
 
 ## Logs / Screenshots
 

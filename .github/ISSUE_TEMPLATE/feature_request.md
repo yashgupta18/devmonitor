@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an enhancement for devmonitor
+about: Suggest an enhancement for devtracekit
 labels: enhancement
 ---
 

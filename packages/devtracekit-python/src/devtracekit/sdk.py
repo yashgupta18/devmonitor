@@ -19,7 +19,7 @@ class SpanContext:
     attributes: Dict[str, object] = field(default_factory=dict)
 
 
-class DevMonitorClient:
+class DevTraceKitClient:
     def __init__(
         self,
         ingest_url: str = "http://localhost:4318/api/ingest/otel",
@@ -92,17 +92,17 @@ class DevMonitorClient:
             ) as response:
                 if response.status >= 300:
                     raise RuntimeError(
-                        f"DevMonitor ingest failed with status {response.status} at {self.ingest_url}"
+                        f"DevTraceKit ingest failed with status {response.status} at {self.ingest_url}"
                     )
         except urllib.error.HTTPError as exc:
             raise RuntimeError(
-                f"DevMonitor ingest HTTP error {exc.code} for {self.ingest_url}. "
-                "Check that DevMonitor is running on the same port and supports /api/ingest/otel."
+                f"DevTraceKit ingest HTTP error {exc.code} for {self.ingest_url}. "
+                "Check that DevTraceKit is running on the same port and supports /api/ingest/otel."
             ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(
-                f"DevMonitor ingest connection error for {self.ingest_url}: {exc.reason}. "
-                "Start DevMonitor or update DEVMONITOR_INGEST_URL."
+                f"DevTraceKit ingest connection error for {self.ingest_url}: {exc.reason}. "
+                "Start DevTraceKit or update DEVTRACEKIT_INGEST_URL."
             ) from exc
 
     def _new_trace_id(self) -> str:

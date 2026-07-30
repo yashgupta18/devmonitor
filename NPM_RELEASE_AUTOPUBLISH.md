@@ -30,7 +30,7 @@ npm publish --access public
 4. Verify published version:
 
 ```bash
-npm view @yashgupta18/devmonitor version
+npm view devtracekit version
 ```
 
 5. Push commit and tag:
@@ -59,7 +59,7 @@ Behavior:
 1. Configure Trusted Publisher in npm:
 - npm package settings -> Trusted Publishers -> Add Publisher
 - Provider: GitHub Actions
-- Repository: `yashgupta18/devmonitor`
+- Repository: `yashgupta18/devtracekit`
 - Workflow file: `.github/workflows/publish-npm.yml`
 - Environment name: `npm-publish`
 - Allowed actions: select `allow npm publish`
@@ -89,8 +89,8 @@ Behavior:
 - `E403` permission or 2FA errors:
   - Confirm Trusted Publisher is linked to the exact repo/workflow/environment
   - Confirm workflow has `id-token: write` permission
-- `E404` on scoped package publish from Actions:
-  - Confirm Trusted Publisher is configured on the package `@yashgupta18/devmonitor` (not only account-level)
+- `E404` on package publish from Actions:
+  - Confirm Trusted Publisher is configured on the package `devtracekit` (not only account-level)
   - Confirm workflow file is exactly `.github/workflows/publish-npm.yml`
   - Confirm environment name is exactly `npm-publish`
   - Remove and re-add the Trusted Publisher entry after repo rename

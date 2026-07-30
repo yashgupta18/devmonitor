@@ -1,4 +1,4 @@
-# Contributing to devmonitor
+# Contributing to devtracekit
 
 Thanks for contributing.
 
@@ -19,7 +19,7 @@ npm test
 3. Start local example:
 
 ```bash
-npm run devmonitor:start -- --example
+npm run devtracekit:start -- --example
 ```
 
 ## Pull Request Guidelines

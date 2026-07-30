@@ -2,7 +2,7 @@ import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
 
-class DevMonitorSpanProcessor {
+class DevTraceKitSpanProcessor {
   constructor(core, serviceName, scope = {}) {
     this.core = core;
     this.serviceName = serviceName;
@@ -44,7 +44,7 @@ class DevMonitorSpanProcessor {
   }
 }
 
-export function createDevMonitorSdk({
+export function createDevTraceKitSdk({
   core,
   serviceName = "node-service",
   tenantId,
@@ -52,12 +52,12 @@ export function createDevMonitorSdk({
   environment,
 }) {
   if (!core?.instrument?.otelSpan) {
-    throw new Error("DevMonitor core with instrument.otelSpan is required");
+    throw new Error("DevTraceKit core with instrument.otelSpan is required");
   }
 
   const provider = new BasicTracerProvider({
     spanProcessors: [
-      new DevMonitorSpanProcessor(core, serviceName, {
+      new DevTraceKitSpanProcessor(core, serviceName, {
         tenantId,
         projectId,
         environment,
@@ -71,11 +71,11 @@ export function createDevMonitorSdk({
     context.setGlobalContextManager(contextManager);
   } catch (error) {
     console.warn(
-      `[devmonitor] context manager registration skipped: ${error.message}`,
+      `[devtracekit] context manager registration skipped: ${error.message}`,
     );
   }
 
-  const tracer = provider.getTracer("@devmonitor/sdk", "0.1.0");
+  const tracer = provider.getTracer("@devtracekit/sdk", "0.1.0");
 
   async function runInSpan(name, options = {}, fn = async () => undefined) {
     const span = tracer.startSpan(name, {

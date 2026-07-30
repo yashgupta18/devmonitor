@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevMonitorCore } from "../src/devmonitor/core.js";
+import { DevTraceKitCore } from "../src/devtracekit/core.js";
 
 test("creates and completes a trace", () => {
-  const core = new DevMonitorCore({ maxTraces: 10 });
+  const core = new DevTraceKitCore({ maxTraces: 10 });
   const trace = core.createTrace({
     method: "GET",
     path: "/health",
@@ -21,7 +21,7 @@ test("creates and completes a trace", () => {
 });
 
 test("adds correlated events by trace id", () => {
-  const core = new DevMonitorCore({ maxTraces: 10 });
+  const core = new DevTraceKitCore({ maxTraces: 10 });
   const trace = core.createTrace({
     method: "GET",
     path: "/checkout",
@@ -46,7 +46,7 @@ test("adds correlated events by trace id", () => {
 });
 
 test("enforces retention limit", () => {
-  const core = new DevMonitorCore({ maxTraces: 2 });
+  const core = new DevTraceKitCore({ maxTraces: 2 });
 
   const first = core.createTrace({
     method: "GET",
@@ -71,7 +71,7 @@ test("enforces retention limit", () => {
 });
 
 test("caps per-trace event count", () => {
-  const core = new DevMonitorCore({ maxTraces: 10, maxEventsPerTrace: 2 });
+  const core = new DevTraceKitCore({ maxTraces: 10, maxEventsPerTrace: 2 });
   const trace = core.createTrace({
     method: "GET",
     path: "/events",
@@ -97,7 +97,7 @@ test("caps per-trace event count", () => {
 });
 
 test("filters traces by endpoint, status, and method", () => {
-  const core = new DevMonitorCore({ maxTraces: 10 });
+  const core = new DevTraceKitCore({ maxTraces: 10 });
 
   const okTrace = core.createTrace({
     method: "GET",
@@ -126,7 +126,7 @@ test("filters traces by endpoint, status, and method", () => {
 });
 
 test("supports tenant, project, and environment scope on traces", () => {
-  const core = new DevMonitorCore({ maxTraces: 20 });
+  const core = new DevTraceKitCore({ maxTraces: 20 });
 
   const tenantATrace = core.createTrace({
     method: "GET",
@@ -166,7 +166,7 @@ test("supports tenant, project, and environment scope on traces", () => {
 });
 
 test("builds service registry grouped by environment", () => {
-  const core = new DevMonitorCore({ maxTraces: 20 });
+  const core = new DevTraceKitCore({ maxTraces: 20 });
 
   const prodTrace = core.createTrace({
     method: "GET",
@@ -217,7 +217,7 @@ test("builds service registry grouped by environment", () => {
 });
 
 test("buildIncidentCorrelations links impacted services from shared trace spans", () => {
-  const core = new DevMonitorCore({ maxTraces: 20 });
+  const core = new DevTraceKitCore({ maxTraces: 20 });
   const sharedTraceId = "00112233445566778899aabbccddeeff";
 
   core.instrument.otelSpan(
@@ -284,7 +284,7 @@ test("buildIncidentCorrelations links impacted services from shared trace spans"
 });
 
 test("maps OpenTelemetry SQL span to sql event", () => {
-  const core = new DevMonitorCore({ maxTraces: 10 });
+  const core = new DevTraceKitCore({ maxTraces: 10 });
 
   const traceId = core.instrument.otelSpan({
     traceId: "abc123trace0000000000000000000000",
@@ -312,7 +312,7 @@ test("maps OpenTelemetry SQL span to sql event", () => {
 });
 
 test("keeps related OpenTelemetry spans in same trace", () => {
-  const core = new DevMonitorCore({ maxTraces: 10 });
+  const core = new DevTraceKitCore({ maxTraces: 10 });
   const sharedTraceId = "feedfacefeedfacefeedfacefeedface";
 
   core.instrument.otelSpan({
@@ -353,7 +353,7 @@ test("keeps related OpenTelemetry spans in same trace", () => {
 });
 
 test("builds service dependency graph from trace events", () => {
-  const core = new DevMonitorCore({ maxTraces: 10 });
+  const core = new DevTraceKitCore({ maxTraces: 10 });
   const trace = core.createTrace({
     method: "GET",
     path: "/checkout",
@@ -388,7 +388,7 @@ test("builds service dependency graph from trace events", () => {
 });
 
 test("buildAiInsights detects slow endpoint and high error rate", () => {
-  const core = new DevMonitorCore({ maxTraces: 20 });
+  const core = new DevTraceKitCore({ maxTraces: 20 });
 
   for (let index = 0; index < 4; index += 1) {
     const trace = core.createTrace({
@@ -428,7 +428,7 @@ test("buildAiInsights detects slow endpoint and high error rate", () => {
 });
 
 test("buildAiInsights detects repeated SQL pattern", () => {
-  const core = new DevMonitorCore({ maxTraces: 10 });
+  const core = new DevTraceKitCore({ maxTraces: 10 });
   const trace = core.createTrace({
     method: "GET",
     path: "/products",

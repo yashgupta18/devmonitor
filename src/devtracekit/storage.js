@@ -11,7 +11,7 @@ export function createTraceStorage(options = {}) {
   if (backend === "file") {
     const filePath =
       options.traceStorePath ??
-      path.resolve(process.cwd(), ".devmonitor/traces.ndjson");
+      path.resolve(process.cwd(), ".devtracekit/traces.ndjson");
     return new FileTraceStore({
       filePath,
       maxTraces: options.maxTraces ?? 1000,

@@ -1,13 +1,13 @@
 {
-  "name": "@yashgupta18/devmonitor",
+  "name": "devtracekit",
   "version": "0.1.5",
-  "description": "devmonitor - open-source engineering intelligence platform for local debugging",
+  "description": "devtracekit - open-source engineering intelligence platform for local debugging",
   "type": "module",
   "bin": {
-    "devmonitor": "src/cli.js"
+    "devtracekit": "src/cli.js"
   },
   "scripts": {
-    "devmonitor:start": "node ./src/cli.js start",
+    "devtracekit:start": "node ./src/cli.js start",
     "example": "node ./examples/local-debug-app.js",
     "example:mini": "node ./examples/mini-e2e-app.js",
     "test": "node --test"
@@ -29,11 +29,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yashgupta18/devmonitor.git"
+    "url": "git+https://github.com/yashgupta18/devtracekit.git"
   },
-  "homepage": "https://github.com/yashgupta18/devmonitor#readme",
+  "homepage": "https://github.com/yashgupta18/devtracekit#readme",
   "bugs": {
-    "url": "https://github.com/yashgupta18/devmonitor/issues"
+    "url": "https://github.com/yashgupta18/devtracekit/issues"
   },
   "engines": {
     "node": ">=18",

@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DevMonitorCore } from "../src/devmonitor/core.js";
-import { createDashboardServer } from "../src/devmonitor/dashboard.js";
+import { DevTraceKitCore } from "../src/devtracekit/core.js";
+import { createDashboardServer } from "../src/devtracekit/dashboard.js";
 
 async function createScopedServer() {
-  const core = new DevMonitorCore({ maxTraces: 100 });
+  const core = new DevTraceKitCore({ maxTraces: 100 });
   const dashboard = createDashboardServer(core, {}, { dashboardPort: 0 });
 
   const address = dashboard.server.address();
@@ -36,9 +36,9 @@ test("ingest otel stores tenant/project/environment scope", async (t) => {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-devmonitor-tenant-id": "team-blue",
-      "x-devmonitor-project-id": "checkout",
-      "x-devmonitor-environment": "prod",
+      "x-devtracekit-tenant-id": "team-blue",
+      "x-devtracekit-project-id": "checkout",
+      "x-devtracekit-environment": "prod",
     },
     body: JSON.stringify({
       serviceName: "checkout-service",
@@ -80,9 +80,9 @@ test("tenants endpoint summarizes observed projects and environments", async (t)
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-devmonitor-tenant-id": tenantId,
-        "x-devmonitor-project-id": projectId,
-        "x-devmonitor-environment": environment,
+        "x-devtracekit-tenant-id": tenantId,
+        "x-devtracekit-project-id": projectId,
+        "x-devtracekit-environment": environment,
       },
       body: JSON.stringify({
         serviceName: "orders-service",

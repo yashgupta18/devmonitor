@@ -1,6 +1,6 @@
-# devmonitor
+# devtracekit
 
-devmonitor is a local-first observability toolkit for backend development.
+devtracekit is a local-first observability toolkit for backend development.
 
 It lets you run a sample service and immediately inspect:
 - Request traces
@@ -25,8 +25,8 @@ It lets you run a sample service and immediately inspect:
 For end users (global CLI):
 
 ```bash
-npm install -g @yashgupta18/devmonitor
-devmonitor start
+npm install -g devtracekit
+devtracekit start
 ```
 
 For local development:
@@ -43,10 +43,10 @@ npm install
 npm test
 ```
 
-3. Start devmonitor with the example app:
+3. Start devtracekit with the example app:
 
 ```bash
-npm run devmonitor:start -- --example
+npm run devtracekit:start -- --example
 ```
 
 4. Open:
@@ -78,7 +78,7 @@ See full setup and verification steps in `MINI_EXAMPLE_APP.md`.
 Run on alternate ports:
 
 ```bash
-DEVMONITOR_DASHBOARD_PORT=4328 DEVMONITOR_APP_PORT=3010 npm run devmonitor:start -- --example
+DEVTRACEKIT_DASHBOARD_PORT=4328 DEVTRACEKIT_APP_PORT=3010 npm run devtracekit:start -- --example
 ```
 
 Then open:
@@ -93,13 +93,13 @@ Then open:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ./packages/devmonitor-python
+python -m pip install -e ./packages/devtracekit-python
 ```
 
-2. Point Python client to devmonitor ingest endpoint:
+2. Point Python client to devtracekit ingest endpoint:
 
 ```bash
-export DEVMONITOR_INGEST_URL=http://localhost:4328/api/ingest/otel
+export DEVTRACEKIT_INGEST_URL=http://localhost:4328/api/ingest/otel
 python ./examples/python-otel-example.py
 ```
 
@@ -164,29 +164,29 @@ python ./examples/python-otel-example.py
 Global install command:
 
 ```bash
-devmonitor start
+devtracekit start
 ```
 
 Local development command:
 
 ```bash
-npm run devmonitor:start
+npm run devtracekit:start
 ```
 
 Local development with sample app:
 
 ```bash
-npm run devmonitor:start -- --example
+npm run devtracekit:start -- --example
 ```
 
 Enable secure remote ingest (example):
 
 ```bash
-DEVMONITOR_REMOTE_INGEST_KEYS=team-key-1,team-key-2 \
-DEVMONITOR_REMOTE_RATE_LIMIT_MAX_REQUESTS=120 \
-DEVMONITOR_REMOTE_RATE_LIMIT_WINDOW_MS=60000 \
-DEVMONITOR_REMOTE_MAX_SPANS_PER_REQUEST=500 \
-npm run devmonitor:start
+DEVTRACEKIT_REMOTE_INGEST_KEYS=team-key-1,team-key-2 \
+DEVTRACEKIT_REMOTE_RATE_LIMIT_MAX_REQUESTS=120 \
+DEVTRACEKIT_REMOTE_RATE_LIMIT_WINDOW_MS=60000 \
+DEVTRACEKIT_REMOTE_MAX_SPANS_PER_REQUEST=500 \
+npm run devtracekit:start
 ```
 
 Send remote spans with API key:
@@ -194,7 +194,7 @@ Send remote spans with API key:
 ```bash
 curl -X POST http://localhost:4318/api/remote/ingest/otel \
   -H "content-type: application/json" \
-  -H "x-devmonitor-api-key: team-key-1" \
+  -H "x-devtracekit-api-key: team-key-1" \
   -d '{"serviceName":"orders-service","spans":[{"traceId":"abc","spanId":"def","name":"http.request"}]}'
 ```
 
@@ -203,9 +203,9 @@ Attach tenant/project/environment context to ingest calls:
 ```bash
 curl -X POST http://localhost:4318/api/ingest/otel \
   -H "content-type: application/json" \
-  -H "x-devmonitor-tenant-id: team-red" \
-  -H "x-devmonitor-project-id: checkout" \
-  -H "x-devmonitor-environment: prod" \
+  -H "x-devtracekit-tenant-id: team-red" \
+  -H "x-devtracekit-project-id: checkout" \
+  -H "x-devtracekit-environment: prod" \
   -d '{"serviceName":"checkout-service","span":{"traceId":"scope-1","spanId":"scope-1a","name":"http.request"}}'
 ```
 
@@ -275,9 +275,9 @@ Collect connector telemetry into trace events:
 ```bash
 curl -X POST http://localhost:4318/api/connectors/collect \
   -H "content-type: application/json" \
-  -H "x-devmonitor-tenant-id: team-ops" \
-  -H "x-devmonitor-project-id: platform" \
-  -H "x-devmonitor-environment: prod" \
+  -H "x-devtracekit-tenant-id: team-ops" \
+  -H "x-devtracekit-project-id: platform" \
+  -H "x-devtracekit-environment: prod" \
   -d '{"connector":"docker","serviceName":"ops-collector"}'
 ```
 
@@ -286,9 +286,9 @@ Correlate an incident across services:
 ```bash
 curl -X POST http://localhost:4318/api/incidents/correlate \
   -H "content-type: application/json" \
-  -H "x-devmonitor-tenant-id: team-ops" \
-  -H "x-devmonitor-project-id: platform" \
-  -H "x-devmonitor-environment: prod" \
+  -H "x-devtracekit-tenant-id: team-ops" \
+  -H "x-devtracekit-project-id: platform" \
+  -H "x-devtracekit-environment: prod" \
   -d '{"incident":"checkout failures","limit":400}'
 ```
 
@@ -315,25 +315,25 @@ curl "http://localhost:4318/api/timeseries?windowMinutes=60&environment=prod"
 Set default scope for local app traces:
 
 ```bash
-DEVMONITOR_TENANT_ID=team-red \
-DEVMONITOR_PROJECT_ID=checkout \
-DEVMONITOR_ENVIRONMENT=dev \
-npm run devmonitor:start -- --example
+DEVTRACEKIT_TENANT_ID=team-red \
+DEVTRACEKIT_PROJECT_ID=checkout \
+DEVTRACEKIT_ENVIRONMENT=dev \
+npm run devtracekit:start -- --example
 ```
 
 Enable file-backed trace store + auth + alerting + HA mode:
 
 ```bash
-DEVMONITOR_STORAGE_BACKEND=file \
-DEVMONITOR_TRACE_STORE_PATH=.devmonitor/traces.ndjson \
-DEVMONITOR_TIMESERIES_RETENTION_MINUTES=10080 \
-DEVMONITOR_AUTH_ENABLED=true \
-DEVMONITOR_API_KEYS=viewer:viewer-key,editor:editor-key,admin:admin-key \
-DEVMONITOR_ALERTING_ENABLED=true \
-DEVMONITOR_WEBHOOK_URL=https://your-alert-endpoint.example/hooks/devmonitor \
-DEVMONITOR_CLUSTER_ENABLED=true \
-DEVMONITOR_DEPLOYMENT_MODE=ha \
-npm run devmonitor:start
+DEVTRACEKIT_STORAGE_BACKEND=file \
+DEVTRACEKIT_TRACE_STORE_PATH=.devtracekit/traces.ndjson \
+DEVTRACEKIT_TIMESERIES_RETENTION_MINUTES=10080 \
+DEVTRACEKIT_AUTH_ENABLED=true \
+DEVTRACEKIT_API_KEYS=viewer:viewer-key,editor:editor-key,admin:admin-key \
+DEVTRACEKIT_ALERTING_ENABLED=true \
+DEVTRACEKIT_WEBHOOK_URL=https://your-alert-endpoint.example/hooks/devtracekit \
+DEVTRACEKIT_CLUSTER_ENABLED=true \
+DEVTRACEKIT_DEPLOYMENT_MODE=ha \
+npm run devtracekit:start
 ```
 
 Production onboarding guide:
@@ -373,7 +373,7 @@ Packaging note:
 
 ## Project Docs
 
-- Plan: `DEVMONITOR_MVP_PLAN.md`
+- Plan: `DEVTRACEKIT_MVP_PLAN.md`
 - Task tracker: `TASKS.md`
 - Test/validation guide: `TESTING.md`
 - Production architecture: `PRODUCTION_ARCHITECTURE.md`

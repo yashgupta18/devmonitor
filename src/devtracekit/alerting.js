@@ -28,7 +28,7 @@ export function createAlertDispatcher(options = {}) {
         const response = await send(url, {
           channel,
           severity: payload.severity ?? "warning",
-          title: payload.title ?? "devmonitor Alert",
+          title: payload.title ?? "devtracekit Alert",
           message: payload.message ?? "No message",
           context,
           timestampMs: Date.now(),

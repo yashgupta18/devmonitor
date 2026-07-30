@@ -51,7 +51,8 @@ Behavior:
 - Reads package name and version from `package.json`
 - Checks whether that exact version already exists on npm
 - Publishes only when the version does not already exist
-- Uses GitHub OIDC Trusted Publishing (no npm token secret)
+- Publishes with GitHub OIDC Trusted Publishing first
+- Falls back to `NPM_TOKEN` secret when Trusted Publishing fails
 - Uses GitHub Actions environment: `npm-publish`
 
 ## One-Time Setup
@@ -69,6 +70,11 @@ Behavior:
 - GitHub repo -> Settings -> Environments -> New environment
 - Name: `npm-publish`
 - Optional: add required reviewers if you want approval before publish
+
+3. Optional fallback secret (recommended):
+- GitHub repo -> Settings -> Secrets and variables -> Actions -> New repository secret
+- Name: `NPM_TOKEN`
+- Value: npm automation token with publish rights to `devtracekit`
 
 3. Ensure the package version changes before merging to `main`:
 - If version is unchanged, workflow will skip publish
@@ -91,10 +97,12 @@ Behavior:
   - Confirm workflow has `id-token: write` permission
 - `E404` on package publish from Actions:
   - Confirm Trusted Publisher is configured on the package `devtracekit` (not only account-level)
+  - Confirm repository is exactly `yashgupta18/devtracekit` after repo rename
   - Confirm workflow file is exactly `.github/workflows/publish-npm.yml`
   - Confirm environment name is exactly `npm-publish`
   - Remove and re-add the Trusted Publisher entry after repo rename
   - Re-run workflow and compare debug step values with npm Trusted Publisher fields
+  - If Trusted Publisher still fails, set `NPM_TOKEN` so fallback publish succeeds automatically
 - Version already exists:
   - Bump version and push again
 - Workflow skipped publish:

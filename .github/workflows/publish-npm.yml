@@ -12,6 +12,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     environment: npm-publish
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
       - name: Checkout
@@ -56,6 +58,22 @@ jobs:
             echo "Version not published; proceeding."
           fi
 
-      - name: Publish to npm
+      - name: Publish to npm (Trusted Publisher)
+        id: publish_trusted
+        continue-on-error: true
         if: steps.exists.outputs.publish == 'true'
         run: npm publish --access public --provenance --registry https://registry.npmjs.org
+
+      - name: Publish to npm (NPM_TOKEN fallback)
+        if: steps.exists.outputs.publish == 'true' && steps.publish_trusted.outcome == 'failure' && env.NPM_TOKEN != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --registry https://registry.npmjs.org
+
+      - name: Fail with publish diagnostics
+        if: steps.exists.outputs.publish == 'true' && steps.publish_trusted.outcome == 'failure' && env.NPM_TOKEN == ''
+        run: |
+          echo "Trusted Publisher publish failed and NPM_TOKEN fallback is not configured."
+          echo "After a GitHub repo rename, re-link npm Trusted Publisher to this exact repo/workflow/environment."
+          echo "Or add repository secret NPM_TOKEN to enable automatic fallback publishing."
+          exit 1

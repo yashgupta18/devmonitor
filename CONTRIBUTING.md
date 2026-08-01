@@ -1,4 +1,4 @@
-# Contributing to devtracekit
+# Contributing to Devtracekit
 
 Thanks for contributing.
 

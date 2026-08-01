@@ -1,6 +1,6 @@
-# devtracekit
+# Devtracekit
 
-devtracekit is a local-first observability toolkit for backend development.
+Devtracekit is a local-first observability toolkit for backend development.
 
 It lets you run a sample service and immediately inspect:
 - Request traces

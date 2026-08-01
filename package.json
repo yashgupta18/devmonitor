@@ -10,6 +10,7 @@
     "devtracekit:start": "node ./src/cli.js start",
     "example": "node ./examples/local-debug-app.js",
     "example:mini": "node ./examples/mini-e2e-app.js",
+    "lint": "find src examples tests packages -name \"*.js\" -print0 | xargs -0 -n1 node --check",
     "test": "node --test"
   },
   "files": [

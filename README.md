@@ -20,6 +20,15 @@ It lets you run a sample service and immediately inspect:
   - AWS CLI (for ECS)
   - Nomad CLI
 
+## Contributing Policy
+
+Pull request titles must start with a conventional tag:
+
+- `feat:`, `fix:`, `perf:`, `docs:`, `refactor:`, `test:`, `chore:`, `build:`, or `ci:`
+- Use `feat!:` for breaking changes and include `BREAKING CHANGE:` details in the PR body
+
+See the full contribution policy in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Quick Start
 
 For end users (global CLI):
